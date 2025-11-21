@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== ADMIN MODULE - User Management ==========
-  app.get("/api/admin/users", async (req, res) => {
+  app.get("/api/admin/users", requireRole("system_admin"), async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/users", async (req, res) => {
+  app.post("/api/admin/users", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertUserSchema.parse(req.body);
       const user = await storage.createUser(validated);
@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/users/:id", async (req, res) => {
+  app.put("/api/admin/users/:id", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertUserSchema.partial().parse(req.body);
       const user = await storage.updateUser(req.params.id, validated);
@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/users/:id", async (req, res) => {
+  app.delete("/api/admin/users/:id", requireRole("system_admin"), async (req, res) => {
     try {
       await storage.deleteUser(req.params.id);
       res.status(204).send();
@@ -166,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== ADMIN MODULE - Department Management ==========
-  app.put("/api/admin/departments/:id", async (req, res) => {
+  app.put("/api/admin/departments/:id", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertDepartmentSchema.partial().parse(req.body);
       const department = await storage.updateDepartment(req.params.id, validated);
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/departments/:id", async (req, res) => {
+  app.delete("/api/admin/departments/:id", requireRole("system_admin"), async (req, res) => {
     try {
       await storage.deleteDepartment(req.params.id);
       res.status(204).send();
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== ADMIN MODULE - Leave Types Management ==========
-  app.get("/api/admin/leave-types", async (req, res) => {
+  app.get("/api/admin/leave-types", requireRole("system_admin"), async (req, res) => {
     try {
       const types = await storage.getAllLeaveTypes();
       res.json(types);
@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/leave-types", async (req, res) => {
+  app.post("/api/admin/leave-types", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertLeaveTypeSchema.parse(req.body);
       const type = await storage.createLeaveType(validated);
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/leave-types/:id", async (req, res) => {
+  app.put("/api/admin/leave-types/:id", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertLeaveTypeSchema.partial().parse(req.body);
       const type = await storage.updateLeaveType(req.params.id, validated);
@@ -233,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/leave-types/:id", async (req, res) => {
+  app.delete("/api/admin/leave-types/:id", requireRole("system_admin"), async (req, res) => {
     try {
       await storage.deleteLeaveType(req.params.id);
       res.status(204).send();
@@ -243,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== ADMIN MODULE - Expense Categories Management ==========
-  app.get("/api/admin/expense-categories", async (req, res) => {
+  app.get("/api/admin/expense-categories", requireRole("system_admin"), async (req, res) => {
     try {
       const categories = await storage.getAllExpenseCategories();
       res.json(categories);
@@ -252,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/expense-categories", async (req, res) => {
+  app.post("/api/admin/expense-categories", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertExpenseCategorySchema.parse(req.body);
       const category = await storage.createExpenseCategory(validated);
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/expense-categories/:id", async (req, res) => {
+  app.put("/api/admin/expense-categories/:id", requireRole("system_admin"), async (req, res) => {
     try {
       const validated = schema.insertExpenseCategorySchema.partial().parse(req.body);
       const category = await storage.updateExpenseCategory(req.params.id, validated);
@@ -283,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/expense-categories/:id", async (req, res) => {
+  app.delete("/api/admin/expense-categories/:id", requireRole("system_admin"), async (req, res) => {
     try {
       await storage.deleteExpenseCategory(req.params.id);
       res.status(204).send();

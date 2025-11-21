@@ -44,6 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RequireRole } from "@/components/RequireRole";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -73,11 +74,41 @@ function Router() {
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
           <Route path="/settings/departments" component={DepartmentManagement} />
-          <Route path="/admin" component={AdminDashboard} />
-          <Route path="/admin/users" component={UserManagement} />
-          <Route path="/admin/departments" component={DepartmentConfig} />
-          <Route path="/admin/leave-types" component={LeaveTypesConfig} />
-          <Route path="/admin/expense-categories" component={ExpenseCategoriesConfig} />
+          <Route path="/admin">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <AdminDashboard />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/users">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <UserManagement />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/departments">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <DepartmentConfig />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/leave-types">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <LeaveTypesConfig />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/expense-categories">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <ExpenseCategoriesConfig />
+              </RequireRole>
+            )}
+          </Route>
         </>
       )}
       <Route component={NotFound} />
