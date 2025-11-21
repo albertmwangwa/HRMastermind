@@ -330,30 +330,31 @@ export default function UserManagement() {
                             Current password is set. Leave blank to keep current password.
                           </div>
                         )}
-                        <div className="relative">
-                          <FormControl>
+                        <FormControl>
+                          <div className="relative">
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder={editingUser ? "Leave blank to keep current" : "Enter password"}
                               {...field}
+                              className="pr-10"
                               data-testid="input-password"
                             />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-0 top-0 h-full"
-                            onClick={() => setShowPassword(!showPassword)}
-                            data-testid="button-toggle-password"
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover-elevate"
+                              onClick={() => setShowPassword(!showPassword)}
+                              data-testid="button-toggle-password"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
                       </div>
                       <FormMessage />
                     </FormItem>
