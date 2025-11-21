@@ -99,13 +99,6 @@ function Router() {
               </RequireRole>
             )}
           </Route>
-          <Route path="/admin/devices">
-            {() => (
-              <RequireRole allowedRoles={["system_admin"]}>
-                <DeviceConfiguration />
-              </RequireRole>
-            )}
-          </Route>
           <Route path="/admin/leave-types">
             {() => (
               <RequireRole allowedRoles={["system_admin"]}>

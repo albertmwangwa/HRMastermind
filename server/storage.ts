@@ -104,6 +104,7 @@ export interface IStorage {
   getEmployeeRequest(id: string): Promise<schema.EmployeeRequest | undefined>;
   createEmployeeRequest(request: schema.InsertEmployeeRequest): Promise<schema.EmployeeRequest>;
   updateEmployeeRequestStatus(id: string, status: "approved" | "rejected", approverId: string, notes?: string): Promise<schema.EmployeeRequest | undefined>;
+  approveEmployeeRequest(requestId: string, approverId: string, notes?: string): Promise<{ request: schema.EmployeeRequest; employee?: schema.Employee }>;
 }
 
 export class DbStorage implements IStorage {
@@ -483,6 +484,52 @@ export class DbStorage implements IStorage {
       .where(eq(schema.employeeRequests.id, id))
       .returning();
     return updated;
+  }
+
+  // Atomic approval: creates employee and updates request status in one operation
+  async approveEmployeeRequest(requestId: string, approverId: string, notes?: string) {
+    const request = await this.getEmployeeRequest(requestId);
+    if (!request) {
+      throw new Error("Request not found");
+    }
+    
+    if (request.status !== "pending") {
+      throw new Error(`Request already ${request.status}`);
+    }
+    
+    // Extract employee data from request
+    const employeeData = request.requestData as any;
+    
+    // Create employee (database will enforce unique email constraint)
+    const newEmployee = await this.createEmployee({
+      firstName: employeeData.firstName,
+      lastName: employeeData.lastName,
+      email: employeeData.email,
+      phone: employeeData.phone,
+      departmentId: employeeData.departmentId,
+      role: employeeData.role,
+      biometricId: employeeData.biometricId,
+      status: employeeData.status || "active",
+      joiningDate: employeeData.joiningDate,
+      userId: undefined,
+    });
+    
+    // Update request status (only if employee creation succeeded)
+    const updatedRequest = await this.updateEmployeeRequestStatus(
+      requestId,
+      "approved",
+      approverId,
+      notes
+    );
+    
+    if (!updatedRequest) {
+      throw new Error("Failed to update request status");
+    }
+    
+    return {
+      request: updatedRequest,
+      employee: newEmployee,
+    };
   }
 }
 

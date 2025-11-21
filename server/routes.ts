@@ -162,24 +162,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { status, notes } = statusSchema.parse(req.body);
       
-      // Update the request status
-      const updated = await storage.updateEmployeeRequestStatus(
-        req.params.id,
-        status,
-        user.id,
-        notes
-      );
-      
-      if (!updated) {
-        return res.status(404).json({ error: "Employee request not found" });
+      // If approving, use atomic approval method
+      if (status === "approved") {
+        try {
+          // Fetch and validate request first
+          const currentRequest = await storage.getEmployeeRequest(req.params.id);
+          if (!currentRequest) {
+            return res.status(404).json({ error: "Employee request not found" });
+          }
+          
+          // Validate that request_data contains required employee fields
+          const employeeDataSchema = z.object({
+            firstName: z.string().min(1, "First name is required"),
+            lastName: z.string().min(1, "Last name is required"),
+            email: z.string().email("Invalid email address"),
+            phone: z.string().optional(),
+            departmentId: z.string().min(1, "Department is required"),
+            role: z.string().min(1, "Role/position is required"),
+            joiningDate: z.string().min(1, "Joining date is required"),
+            biometricId: z.string().optional(),
+            status: z.enum(["active", "inactive", "terminated"]).optional(),
+          });
+          
+          const employeeData = employeeDataSchema.parse(currentRequest.requestData);
+          
+          // Verify department exists
+          const department = await storage.getDepartment(employeeData.departmentId);
+          if (!department) {
+            return res.status(400).json({ 
+              error: "Invalid department ID in request data" 
+            });
+          }
+          
+          // Use atomic approval method (handles idempotency and creates employee)
+          const result = await storage.approveEmployeeRequest(
+            req.params.id,
+            user.id,
+            notes
+          );
+          
+          res.json({
+            request: result.request,
+            employee: result.employee,
+            message: "Employee request approved and employee created successfully"
+          });
+        } catch (error: any) {
+          // Handle unique constraint violation (duplicate email)
+          if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
+            return res.status(409).json({ 
+              error: "Employee with this email already exists" 
+            });
+          }
+          
+          // Handle already processed requests
+          if (error.message?.includes("already")) {
+            return res.status(400).json({ error: error.message });
+          }
+          
+          throw error;
+        }
+      } else {
+        // For rejection, just update the status
+        const currentRequest = await storage.getEmployeeRequest(req.params.id);
+        if (!currentRequest) {
+          return res.status(404).json({ error: "Employee request not found" });
+        }
+        
+        if (currentRequest.status !== "pending") {
+          return res.status(400).json({ 
+            error: `Request already ${currentRequest.status}. Cannot update status.` 
+          });
+        }
+        
+        const updated = await storage.updateEmployeeRequestStatus(
+          req.params.id,
+          status,
+          user.id,
+          notes
+        );
+        
+        if (!updated) {
+          return res.status(500).json({ error: "Failed to update request status" });
+        }
+        
+        res.json(updated);
       }
-      
-      res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to update employee request status" });
+        console.error("Error processing employee request:", error);
+        res.status(500).json({ error: "Failed to process employee request" });
       }
     }
   });
