@@ -11,6 +11,8 @@ export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "r
 export const expenseStatusEnum = pgEnum("expense_status", ["pending", "approved", "rejected"]);
 export const jobStatusEnum = pgEnum("job_status", ["active", "closed"]);
 export const candidateStageEnum = pgEnum("candidate_stage", ["applied", "screening", "interview", "offer", "hired", "rejected"]);
+export const employeeRequestTypeEnum = pgEnum("employee_request_type", ["new_employee", "transfer"]);
+export const employeeRequestStatusEnum = pgEnum("employee_request_status", ["pending", "approved", "rejected"]);
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(
@@ -59,6 +61,19 @@ export const employees = pgTable("employees", {
   status: employmentStatusEnum("status").notNull().default("active"),
   joiningDate: date("joining_date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Employee Requests (for Department Managers to request new employees or transfers)
+export const employeeRequests = pgTable("employee_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestType: employeeRequestTypeEnum("request_type").notNull(),
+  requestedById: varchar("requested_by_id").references(() => users.id).notNull(),
+  status: employeeRequestStatusEnum("status").notNull().default("pending"),
+  requestData: jsonb("request_data").notNull(),
+  approvedById: varchar("approved_by_id").references(() => users.id),
+  approvalNotes: text("approval_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // ZKTeco Devices
@@ -232,6 +247,7 @@ export const insertSalaryConfigSchema = createInsertSchema(salaryConfigs).omit({
 export const insertPayrollRecordSchema = createInsertSchema(payrollRecords).omit({ id: true, processedAt: true });
 export const insertJobPostingSchema = createInsertSchema(jobPostings).omit({ id: true, createdAt: true });
 export const insertCandidateSchema = createInsertSchema(candidates).omit({ id: true, createdAt: true });
+export const insertEmployeeRequestSchema = createInsertSchema(employeeRequests).omit({ id: true, createdAt: true, updatedAt: true, approvedById: true, approvalNotes: true });
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -282,3 +298,6 @@ export type JobPosting = typeof jobPostings.$inferSelect;
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = typeof candidates.$inferSelect;
+
+export type InsertEmployeeRequest = z.infer<typeof insertEmployeeRequestSchema>;
+export type EmployeeRequest = typeof employeeRequests.$inferSelect;
