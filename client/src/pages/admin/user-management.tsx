@@ -339,12 +339,10 @@ export default function UserManagement() {
                               className="pr-10"
                               data-testid="input-password"
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover-elevate"
                               onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                               data-testid="button-toggle-password"
                             >
                               {showPassword ? (
@@ -352,7 +350,7 @@ export default function UserManagement() {
                               ) : (
                                 <Eye className="h-4 w-4" />
                               )}
-                            </Button>
+                            </button>
                           </div>
                         </FormControl>
                       </div>
