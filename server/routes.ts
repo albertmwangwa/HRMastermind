@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as schema from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, isAuthenticated, requireRole } from "./replitAuth";
+import { setupAuth, requireRole } from "./localAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -12,30 +12,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Protect all API routes except authentication endpoints
   app.use("/api/*", (req, res, next) => {
     if (req.originalUrl.startsWith("/api/login") || 
-        req.originalUrl.startsWith("/api/callback") || 
         req.originalUrl.startsWith("/api/logout") ||
         req.originalUrl === "/api/auth/user") {
       return next();
     }
-    return isAuthenticated(req, res, next);
-  });
-
-  // ========== AUTH ROUTES ==========
-  app.get("/api/auth/user", async (req: any, res) => {
-    try {
-      if (!req.isAuthenticated() || !req.user?.claims?.sub) {
-        return res.json(null);
-      }
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.json(null);
-      }
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ error: "Failed to fetch user" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
     }
+    next();
   });
 
   // ========== EMPLOYEES MODULE ==========
@@ -378,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/attendance", async (req, res) => {
+  app.post("/api/attendance", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const validated = schema.insertAttendanceLogSchema.parse(req.body);
       const log = await storage.createAttendanceLog(validated);
@@ -411,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/leave/requests", async (req, res) => {
+  app.post("/api/leave/requests", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const validated = schema.insertLeaveRequestSchema.parse(req.body);
       const request = await storage.createLeaveRequest(validated);
@@ -478,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses/claims", async (req, res) => {
+  app.post("/api/expenses/claims", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const validated = schema.insertExpenseClaimSchema.parse(req.body);
       const claim = await storage.createExpenseClaim(validated);
@@ -536,7 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/performance/goals", async (req, res) => {
+  app.post("/api/performance/goals", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const validated = schema.insertPerformanceGoalSchema.parse(req.body);
       const goal = await storage.createGoal(validated);
@@ -550,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/performance/goals/:id", async (req, res) => {
+  app.patch("/api/performance/goals/:id", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const progressSchema = z.object({
         progress: z.number().min(0).max(100)
@@ -576,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/performance/appraisals", async (req, res) => {
+  app.post("/api/performance/appraisals", requireRole("hr_manager", "department_manager"), async (req, res) => {
     try {
       const validated = schema.insertAppraisalSchema.parse(req.body);
       const appraisal = await storage.createAppraisal(validated);
@@ -599,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/performance/feedback", async (req, res) => {
+  app.post("/api/performance/feedback", requireRole("employee", "department_manager", "hr_manager", "system_admin"), async (req, res) => {
     try {
       const validated = schema.insertFeedbackSchema.parse(req.body);
       const feedback = await storage.createFeedback(validated);
@@ -704,7 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/recruitment/candidates", async (req, res) => {
+  app.post("/api/recruitment/candidates", requireRole("hr_manager"), async (req, res) => {
     try {
       const validated = schema.insertCandidateSchema.parse(req.body);
       const candidate = await storage.createCandidate(validated);

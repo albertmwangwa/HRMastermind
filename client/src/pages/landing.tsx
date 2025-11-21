@@ -42,7 +42,7 @@ export default function Landing() {
             <div className="pt-4">
               <Button
                 size="lg"
-                onClick={() => (window.location.href = "/api/login")}
+                onClick={() => (window.location.href = "/login")}
                 data-testid="button-login-cta"
                 className="px-8 py-6"
               >

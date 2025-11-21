@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  passwordHash: varchar("password_hash"),
   role: roleEnum("role").notNull().default("employee"),
   departmentId: varchar("department_id").references(() => departments.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
