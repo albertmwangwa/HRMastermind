@@ -10,14 +10,23 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Employees from "@/pages/employees";
+import EmployeeDetail from "@/pages/employee-detail";
 import Attendance from "@/pages/attendance";
+import AttendanceEntry from "@/pages/attendance-entry";
 import Leave from "@/pages/leave";
+import LeaveConfiguration from "@/pages/leave-configuration";
+import LeaveApproval from "@/pages/leave-approval";
 import Expenses from "@/pages/expenses";
+import ExpenseApproval from "@/pages/expense-approval";
 import Performance from "@/pages/performance";
 import Payroll from "@/pages/payroll";
+import SalaryConfiguration from "@/pages/salary-configuration";
 import Recruitment from "@/pages/recruitment";
+import JobDetail from "@/pages/job-detail";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import DeviceConfiguration from "@/pages/device-configuration";
+import DepartmentManagement from "@/pages/department-management";
 import NotFound from "@/pages/not-found";
 import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,14 +51,23 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/recruitment" component={Recruitment} />
+          <Route path="/recruitment/job/:id" component={JobDetail} />
           <Route path="/employees" component={Employees} />
+          <Route path="/employees/:id" component={EmployeeDetail} />
           <Route path="/attendance" component={Attendance} />
+          <Route path="/attendance-entry" component={AttendanceEntry} />
+          <Route path="/attendance/device/:id" component={DeviceConfiguration} />
           <Route path="/leave" component={Leave} />
+          <Route path="/leave-configuration" component={LeaveConfiguration} />
+          <Route path="/leave-approval" component={LeaveApproval} />
           <Route path="/expenses" component={Expenses} />
+          <Route path="/expense-approval" component={ExpenseApproval} />
           <Route path="/performance" component={Performance} />
           <Route path="/payroll" component={Payroll} />
+          <Route path="/payroll/salary/:employeeId" component={SalaryConfiguration} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
+          <Route path="/settings/departments" component={DepartmentManagement} />
         </>
       )}
       <Route component={NotFound} />
