@@ -8,6 +8,19 @@ This HRMS (Human Resource Management System) is a full-stack web application man
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### November 21, 2025 - Device Configuration Moved to Admin Portal
+- **Restructured ZKTeco device management** to be admin-only feature
+  - Created dedicated Device Configuration page at `/admin/devices` for System Admin role
+  - Removed "Devices" tab from Attendance page (now shows only Attendance Records and Calendar View)
+  - Updated routing: device management routes moved from `/attendance/device/*` to `/admin/device/*`
+  - Added proper RBAC guards using RequireRole component to restrict access to system_admin
+  - Architect-verified: RequireRole component correctly enforces role-based access control
+- **Security**: Device configuration, sync operations, and device addition now restricted to System Admin only
+- **Navigation**: Device Configuration menu item in admin sidebar points to `/admin/devices`
+- **Files modified**: client/src/pages/admin/devices.tsx (new), client/src/App.tsx, client/src/pages/attendance.tsx, client/src/components/app-sidebar.tsx
+
 ## System Architecture
 
 ### Frontend Architecture
