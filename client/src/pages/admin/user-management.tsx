@@ -79,7 +79,7 @@ export default function UserManagement() {
       lastName: "",
       email: "",
       role: "employee",
-      departmentId: "",
+      departmentId: "none",
     },
   });
 
@@ -160,7 +160,7 @@ export default function UserManagement() {
       lastName: user.lastName || "",
       email: user.email || "",
       role: user.role,
-      departmentId: user.departmentId || "",
+      departmentId: user.departmentId || "none",
     });
     setIsDialogOpen(true);
   };
@@ -172,16 +172,21 @@ export default function UserManagement() {
       lastName: "",
       email: "",
       role: "employee",
-      departmentId: "",
+      departmentId: "none",
     });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = (data: z.infer<typeof userFormSchema>) => {
+    const submitData = {
+      ...data,
+      departmentId: data.departmentId === "none" ? undefined : data.departmentId,
+    };
+    
     if (editingUser) {
-      updateMutation.mutate({ id: editingUser.id, ...data });
+      updateMutation.mutate({ id: editingUser.id, ...submitData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -308,7 +313,7 @@ export default function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {departments.map((dept) => (
                             <SelectItem key={dept.id} value={dept.id}>
                               {dept.name}
