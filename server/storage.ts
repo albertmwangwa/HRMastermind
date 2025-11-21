@@ -97,6 +97,13 @@ export interface IStorage {
   getCandidate(id: string): Promise<schema.Candidate | undefined>;
   createCandidate(candidate: schema.InsertCandidate): Promise<schema.Candidate>;
   updateCandidateStage(id: string, stage: string): Promise<void>;
+  
+  // Employee Requests
+  getAllEmployeeRequests(): Promise<schema.EmployeeRequest[]>;
+  getEmployeeRequestsByUser(userId: string): Promise<schema.EmployeeRequest[]>;
+  getEmployeeRequest(id: string): Promise<schema.EmployeeRequest | undefined>;
+  createEmployeeRequest(request: schema.InsertEmployeeRequest): Promise<schema.EmployeeRequest>;
+  updateEmployeeRequestStatus(id: string, status: "approved" | "rejected", approverId: string, notes?: string): Promise<schema.EmployeeRequest | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -444,6 +451,38 @@ export class DbStorage implements IStorage {
 
   async updateCandidateStage(id: string, stage: string) {
     await db.update(schema.candidates).set({ stage: stage as any }).where(eq(schema.candidates.id, id));
+  }
+
+  // Employee Requests
+  async getAllEmployeeRequests() {
+    return await db.select().from(schema.employeeRequests).orderBy(desc(schema.employeeRequests.createdAt));
+  }
+
+  async getEmployeeRequestsByUser(userId: string) {
+    return await db.select().from(schema.employeeRequests).where(eq(schema.employeeRequests.requestedById, userId)).orderBy(desc(schema.employeeRequests.createdAt));
+  }
+
+  async getEmployeeRequest(id: string) {
+    const [request] = await db.select().from(schema.employeeRequests).where(eq(schema.employeeRequests.id, id));
+    return request;
+  }
+
+  async createEmployeeRequest(request: schema.InsertEmployeeRequest) {
+    const [newRequest] = await db.insert(schema.employeeRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async updateEmployeeRequestStatus(id: string, status: "approved" | "rejected", approverId: string, notes?: string) {
+    const [updated] = await db.update(schema.employeeRequests)
+      .set({ 
+        status, 
+        approvedById: approverId,
+        approvalNotes: notes,
+        updatedAt: sql`now()`
+      })
+      .where(eq(schema.employeeRequests.id, id))
+      .returning();
+    return updated;
   }
 }
 
