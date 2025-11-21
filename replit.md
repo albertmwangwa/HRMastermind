@@ -18,6 +18,24 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 21, 2025 - Password Management & Email Notifications
+- **Implemented password management** in User Management module
+  - Password required during user creation (min 6 characters)
+  - Password optional during user edit (leave blank to keep current)
+  - Zod schema with z.preprocess handles empty string → undefined transformation
+  - Bcrypt hashing (10 salt rounds) for all passwords
+  - Eye/EyeOff toggle for password visibility in forms
+- **Integrated Resend email service** for credential notifications
+  - Automatically sends welcome email with login credentials after user creation
+  - HTML email template with user details and login link
+  - Non-blocking error handling (logs failures, doesn't block user creation)
+  - Environment variable: RESEND_API_KEY configured via Resend connector
+- **Form validation improvements**:
+  - Separate schemas for create (password required) vs update (password optional)
+  - z.preprocess converts empty strings to undefined before validation
+  - handleSubmit strips undefined passwords from update payloads
+- **Files modified**: server/routes.ts, server/email.ts (new), client/src/pages/admin/user-management.tsx
+
 ### November 21, 2025 - Authentication Migration & Security Hardening
 - **Migrated authentication** from Replit Auth (OIDC) to local email/password using Passport Local Strategy
 - **Changed primary color** from pink to blue (#1965ae) across entire application
@@ -115,7 +133,10 @@ Preferred communication style: Simple, everyday language.
 - Architect validated: PASS rating for comprehensive security implementation
 
 **Admin Configuration (Completed):**
-- User Management: Create/update/delete users with role assignment and department linking
+- User Management: Create/update/delete users with role assignment, department linking, and password management
+  - Password required during creation (min 6 chars), optional during edit
+  - Automated credential emails sent via Resend after user creation
+  - Separate form schemas for create vs update with proper validation
 - Department Configuration: Manage organizational structure with CRUD operations
 - Leave Types Configuration: Define PTO types, accrual rules, and approval workflows
 - Expense Categories Configuration: Set up reimbursement categories and approval limits
@@ -209,6 +230,12 @@ Preferred communication style: Simple, everyday language.
 - zod for runtime validation
 - react-hook-form with hookform/resolvers for form management
 - nanoid for unique ID generation
+
+**Email Service:**
+- Resend for transactional emails (credential notifications, password resets, etc.)
+- Email utility module (server/email.ts) with Resend client
+- HTML email templates for professional communication
+- Non-blocking error handling with logging
 
 **Biometric Integration (Planned):**
 - Attendance devices via IP/port configuration (ZKTeco protocol expected)
