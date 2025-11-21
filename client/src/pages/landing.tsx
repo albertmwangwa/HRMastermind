@@ -1,6 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Clock, Calendar, DollarSign, Target, Briefcase, TrendingUp, Shield } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Users,
+  Clock,
+  Calendar,
+  DollarSign,
+  Target,
+  Briefcase,
+  TrendingUp,
+  Shield,
+} from "lucide-react";
 
 export default function Landing() {
   return (
@@ -10,21 +25,28 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background"></div>
         <div className="relative container mx-auto px-4 py-16">
           <div className="text-center max-w-4xl mx-auto space-y-6">
-            <h1 className="text-5xl font-bold tracking-tight" data-testid="text-hero-title">
-              Modern HRMS for Growing Organizations
+            <h1
+              className="text-5xl font-bold tracking-tight"
+              data-testid="text-hero-title"
+            >
+              Modern HRMS for Suhara Group
             </h1>
-            <p className="text-xl text-muted-foreground" data-testid="text-hero-subtitle">
-              Streamline your HR operations with our comprehensive human resource management system. 
-              From recruitment to payroll, manage your entire employee lifecycle in one place.
+            <p
+              className="text-xl text-muted-foreground"
+              data-testid="text-hero-subtitle"
+            >
+              Streamline your HR operations with our comprehensive human
+              resource management system. From recruitment to payroll, manage
+              your entire employee lifecycle in one place.
             </p>
             <div className="pt-4">
-              <Button 
-                size="lg" 
-                onClick={() => window.location.href = '/api/login'}
-                data-testid="button-get-started"
-                className="text-lg px-8 py-6"
+              <Button
+                size="lg"
+                onClick={() => (window.location.href = "/api/login")}
+                data-testid="button-login-cta"
+                className="px-8 py-6"
               >
-                Get Started
+                Sign In Now
               </Button>
             </div>
           </div>
@@ -34,8 +56,16 @@ export default function Landing() {
       {/* Features Grid */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4" data-testid="text-features-title">Complete HR Management Suite</h2>
-          <p className="text-muted-foreground" data-testid="text-features-subtitle">
+          <h2
+            className="text-3xl font-bold mb-4"
+            data-testid="text-features-title"
+          >
+            Complete HR Management Suite
+          </h2>
+          <p
+            className="text-muted-foreground"
+            data-testid="text-features-subtitle"
+          >
             Everything you need to manage your workforce efficiently
           </p>
         </div>
@@ -46,7 +76,8 @@ export default function Landing() {
               <Users className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Employee Management</CardTitle>
               <CardDescription>
-                Comprehensive employee profiles, department organization, and team hierarchy management
+                Comprehensive employee profiles, department organization, and
+                team hierarchy management
               </CardDescription>
             </CardHeader>
           </Card>
@@ -56,7 +87,8 @@ export default function Landing() {
               <Clock className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Attendance Tracking</CardTitle>
               <CardDescription>
-                Biometric device integration with ZKTeco for accurate attendance monitoring across branches
+                Biometric device integration with ZKTeco for accurate attendance
+                monitoring across branches
               </CardDescription>
             </CardHeader>
           </Card>
@@ -66,7 +98,8 @@ export default function Landing() {
               <Calendar className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Leave Management</CardTitle>
               <CardDescription>
-                Streamlined leave requests, approval workflows, and balance tracking with holiday calendar
+                Streamlined leave requests, approval workflows, and balance
+                tracking with holiday calendar
               </CardDescription>
             </CardHeader>
           </Card>
@@ -76,27 +109,36 @@ export default function Landing() {
               <DollarSign className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Payroll Processing</CardTitle>
               <CardDescription>
-                Automated salary calculations, payslip generation, and comprehensive payroll management
+                Automated salary calculations, payslip generation, and
+                comprehensive payroll management
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card data-testid="card-feature-performance" className="hover-elevate">
+          <Card
+            data-testid="card-feature-performance"
+            className="hover-elevate"
+          >
             <CardHeader>
               <Target className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Performance Management</CardTitle>
               <CardDescription>
-                Goal tracking, performance appraisals, and continuous feedback system for employee growth
+                Goal tracking, performance appraisals, and continuous feedback
+                system for employee growth
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card data-testid="card-feature-recruitment" className="hover-elevate">
+          <Card
+            data-testid="card-feature-recruitment"
+            className="hover-elevate"
+          >
             <CardHeader>
               <Briefcase className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Recruitment</CardTitle>
               <CardDescription>
-                Complete applicant tracking system with hiring pipeline and candidate evaluation
+                Complete applicant tracking system with hiring pipeline and
+                candidate evaluation
               </CardDescription>
             </CardHeader>
           </Card>
@@ -106,7 +148,8 @@ export default function Landing() {
               <TrendingUp className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Expense Management</CardTitle>
               <CardDescription>
-                Easy expense claim submission, approval workflow, and comprehensive expense tracking
+                Easy expense claim submission, approval workflow, and
+                comprehensive expense tracking
               </CardDescription>
             </CardHeader>
           </Card>
@@ -116,7 +159,8 @@ export default function Landing() {
               <Shield className="h-12 w-12 mb-4 text-primary" />
               <CardTitle>Role-Based Access</CardTitle>
               <CardDescription>
-                Secure authentication with granular permissions for admins, managers, and employees
+                Secure authentication with granular permissions for admins,
+                managers, and employees
               </CardDescription>
             </CardHeader>
           </Card>
@@ -124,24 +168,6 @@ export default function Landing() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-card/50 border-t">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h2 className="text-3xl font-bold mb-4" data-testid="text-cta-title">
-            Ready to transform your HR operations?
-          </h2>
-          <p className="text-muted-foreground mb-8" data-testid="text-cta-subtitle">
-            Join organizations using our modern HRMS to streamline workforce management
-          </p>
-          <Button 
-            size="lg"
-            onClick={() => window.location.href = '/api/login'}
-            data-testid="button-login-cta"
-            className="px-8 py-6"
-          >
-            Sign In Now
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
