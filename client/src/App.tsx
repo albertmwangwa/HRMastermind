@@ -33,6 +33,7 @@ import DepartmentConfig from "@/pages/admin/department-config";
 import LeaveTypesConfig from "@/pages/admin/leave-types-config";
 import ExpenseCategoriesConfig from "@/pages/admin/expense-categories-config";
 import AdminDashboard from "@/pages/admin/dashboard";
+import AdminDevices from "@/pages/admin/devices";
 import NotFound from "@/pages/not-found";
 import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,6 @@ function Router() {
           <Route path="/employees/:id" component={EmployeeDetail} />
           <Route path="/attendance" component={Attendance} />
           <Route path="/attendance-entry" component={AttendanceEntry} />
-          <Route path="/attendance/device/:id" component={DeviceConfiguration} />
           <Route path="/leave" component={Leave} />
           <Route path="/leave-configuration" component={LeaveConfiguration} />
           <Route path="/leave-approval" component={LeaveApproval} />
@@ -110,6 +110,20 @@ function Router() {
             {() => (
               <RequireRole allowedRoles={["system_admin"]}>
                 <ExpenseCategoriesConfig />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/devices">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <AdminDevices />
+              </RequireRole>
+            )}
+          </Route>
+          <Route path="/admin/device/:id">
+            {() => (
+              <RequireRole allowedRoles={["system_admin"]}>
+                <DeviceConfiguration />
               </RequireRole>
             )}
           </Route>
