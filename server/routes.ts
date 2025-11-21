@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import * as schema from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, requireRole } from "./localAuth";
+import bcrypt from "bcrypt";
+import { sendCredentialEmail } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -111,8 +113,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users", requireRole("system_admin"), async (req, res) => {
     try {
-      const validated = schema.insertUserSchema.parse(req.body);
+      const { password, ...userData } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ error: "Password is required for new users" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const validated = schema.insertUserSchema.parse({
+        ...userData,
+        passwordHash,
+      });
+      
       const user = await storage.createUser(validated);
+      
+      // Send credential email
+      try {
+        await sendCredentialEmail(
+          user.email!,
+          user.firstName || "",
+          user.lastName || "",
+          user.email!,
+          password
+        );
+      } catch (emailError) {
+        console.error("Failed to send credential email:", emailError);
+        // Don't fail the user creation if email fails
+      }
+      
       res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -125,7 +153,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/users/:id", requireRole("system_admin"), async (req, res) => {
     try {
-      const validated = schema.insertUserSchema.partial().parse(req.body);
+      const { password, ...userData } = req.body;
+      
+      let updateData: any = userData;
+      
+      // If password is provided, hash it
+      if (password) {
+        const passwordHash = await bcrypt.hash(password, 10);
+        updateData.passwordHash = passwordHash;
+      }
+      
+      const validated = schema.insertUserSchema.partial().parse(updateData);
       const user = await storage.updateUser(req.params.id, validated);
       if (!user) {
         return res.status(404).json({ error: "User not found" });

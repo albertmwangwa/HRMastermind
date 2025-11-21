@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -54,6 +54,7 @@ const userFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
   role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]),
   departmentId: z.string().optional(),
 });
@@ -62,6 +63,7 @@ export default function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
@@ -78,6 +80,7 @@ export default function UserManagement() {
       firstName: "",
       lastName: "",
       email: "",
+      password: "",
       role: "employee",
       departmentId: "none",
     },
@@ -90,15 +93,16 @@ export default function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: "User created and credentials sent via email",
       });
       setIsDialogOpen(false);
       form.reset();
+      setShowPassword(false);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create user",
+        description: error?.message || "Failed to create user",
         variant: "destructive",
       });
     },
@@ -116,11 +120,12 @@ export default function UserManagement() {
       setIsDialogOpen(false);
       setEditingUser(null);
       form.reset();
+      setShowPassword(false);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update user",
+        description: error?.message || "Failed to update user",
         variant: "destructive",
       });
     },
@@ -159,9 +164,11 @@ export default function UserManagement() {
       firstName: user.firstName || "",
       lastName: user.lastName || "",
       email: user.email || "",
+      password: "",
       role: user.role,
       departmentId: user.departmentId || "none",
     });
+    setShowPassword(false);
     setIsDialogOpen(true);
   };
 
@@ -171,9 +178,11 @@ export default function UserManagement() {
       firstName: "",
       lastName: "",
       email: "",
+      password: "",
       role: "employee",
       departmentId: "none",
     });
+    setShowPassword(false);
     setIsDialogOpen(true);
   };
 
@@ -273,6 +282,49 @@ export default function UserManagement() {
                           data-testid="input-email"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {editingUser ? "New Password (Optional)" : "Password"}
+                      </FormLabel>
+                      <div className="space-y-2">
+                        {editingUser && editingUser.passwordHash && (
+                          <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                            Current hash: {editingUser.passwordHash.substring(0, 20)}...
+                          </div>
+                        )}
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder={editingUser ? "Leave blank to keep current" : "Enter password"}
+                              {...field}
+                              data-testid="input-password"
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full"
+                            onClick={() => setShowPassword(!showPassword)}
+                            data-testid="button-toggle-password"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
