@@ -27,6 +27,11 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import DeviceConfiguration from "@/pages/device-configuration";
 import DepartmentManagement from "@/pages/department-management";
+import UserManagement from "@/pages/admin/user-management";
+import DepartmentConfig from "@/pages/admin/department-config";
+import LeaveTypesConfig from "@/pages/admin/leave-types-config";
+import ExpenseCategoriesConfig from "@/pages/admin/expense-categories-config";
+import AdminDashboard from "@/pages/admin/admin-dashboard";
 import NotFound from "@/pages/not-found";
 import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,6 +73,11 @@ function Router() {
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
           <Route path="/settings/departments" component={DepartmentManagement} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/users" component={UserManagement} />
+          <Route path="/admin/departments" component={DepartmentConfig} />
+          <Route path="/admin/leave-types" component={LeaveTypesConfig} />
+          <Route path="/admin/expense-categories" component={ExpenseCategoriesConfig} />
         </>
       )}
       <Route component={NotFound} />

@@ -4,6 +4,12 @@
 
 This is a comprehensive HRMS (Human Resource Management System) built as a full-stack web application. The system manages the complete employee lifecycle including recruitment, employee management, attendance tracking, leave management, expense claims, performance reviews, and payroll processing. It follows a modern enterprise SaaS design approach inspired by BambooHR and Workday, emphasizing information clarity, efficient workflows, and professional aesthetics.
 
+The system implements **Role-Based Access Control (RBAC)** with four distinct user experiences:
+- **System Admin**: Configuration-focused dashboard for managing users, departments, leave types, and expense categories
+- **HR Manager**: Full access to all HR modules (recruitment, employees, attendance, leave, expenses, performance, payroll, reports)
+- **Department Manager**: Limited to their department's data (team members, attendance, leave approvals, expense approvals, performance)
+- **Employee**: Self-service portal for personal profile, attendance, leave applications, expense submissions, and performance
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -94,8 +100,10 @@ Preferred communication style: Simple, everyday language.
 - Drizzle Kit for migrations management
 
 **Data Models:**
-- Users (authentication with Replit OIDC)
-- Employees (profile, department, employment status)
+- Users (authentication with Replit OIDC, includes role and departmentId for RBAC)
+  - Roles: system_admin, hr_manager, department_manager, employee
+  - Department assignment for department managers
+- Employees (profile, department, employment status, links to user account)
 - Departments (organizational structure)
 - Attendance Devices (biometric integration points)
 - Attendance Logs (check-in/check-out records)
@@ -114,15 +122,16 @@ Preferred communication style: Simple, everyday language.
 ### Module Organization
 
 **Feature Modules:**
-1. **Recruitment**: Job posting management and candidate pipeline tracking
-2. **Employees**: Employee lifecycle management, profiles, department organization
-3. **Attendance**: Biometric device integration, attendance log tracking
-4. **Leave**: Leave type configuration, request/approval workflows
-5. **Expenses**: Expense category setup, claim submission and approval
-6. **Performance**: Goal setting, appraisals, and feedback management
-7. **Payroll**: Salary processing and payslip generation
-8. **Reports**: Comprehensive analytics across all modules
-9. **Settings**: System configuration and company preferences
+1. **Recruitment**: Job posting management and candidate pipeline tracking (HR Manager only)
+2. **Employees**: Employee lifecycle management, profiles, department organization (HR Manager, Department Manager view filtered by dept)
+3. **Attendance**: Biometric device integration, attendance log tracking (all roles, filtered by permission)
+4. **Leave**: Leave type configuration, request/approval workflows (all roles with different views)
+5. **Expenses**: Expense category setup, claim submission and approval (all roles with different views)
+6. **Performance**: Goal setting, appraisals, and feedback management (all roles with different views)
+7. **Payroll**: Salary processing and payslip generation (HR Manager only)
+8. **Reports**: Comprehensive analytics across all modules (HR Manager only)
+9. **Settings**: System configuration and company preferences (HR Manager only)
+10. **System Admin**: User management, role assignment, department config, leave types, expense categories (System Admin only)
 
 **Code Organization:**
 - `/client`: Frontend React application
