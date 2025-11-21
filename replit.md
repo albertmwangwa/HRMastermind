@@ -10,6 +10,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 21, 2025 - Enhanced Device Management & Attendance Filtering
+- **Device Management Enhancements**
+  - Added delete device functionality with confirmation dialog on device cards
+  - Fixed navigation: back/cancel buttons in device configuration now properly route to `/admin/devices`
+  - Implemented real TCP connection testing with multiple states (idle, testing, success, failed, timeout)
+  - Added ZKTeco API mode support with script input textarea and file import (.js, .json, .txt, .xml)
+  - Connection test displays detailed feedback messages for all result states
+- **Attendance Filtering System**
+  - Added comprehensive filter controls to Attendance Records view
+  - Time period selector: Today, This Week, This Month, Last Week, Last Month, Custom Range
+  - Custom date range picker with from/to calendar selectors
+  - Department, Location, and Company filter dropdowns
+  - Reset filters button for quick filter clearing
+- **UI/UX Improvements**
+  - Fixed dropdown contrast issue: SelectItem components now have bg-popover background with hover-elevate
+  - Improved visual feedback for connection testing states
+  - Enhanced device card layout with delete icon button
+- **Files modified**: client/src/pages/admin/devices.tsx, client/src/pages/device-configuration.tsx, client/src/pages/attendance.tsx, client/src/components/ui/select.tsx
+
 ### November 21, 2025 - Device Configuration Moved to Admin Portal
 - **Restructured ZKTeco device management** to be admin-only feature
   - Created dedicated Device Configuration page at `/admin/devices` for System Admin role
