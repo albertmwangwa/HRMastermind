@@ -32,7 +32,7 @@ import UserManagement from "@/pages/admin/user-management";
 import DepartmentConfig from "@/pages/admin/department-config";
 import LeaveTypesConfig from "@/pages/admin/leave-types-config";
 import ExpenseCategoriesConfig from "@/pages/admin/expense-categories-config";
-import AdminDashboard from "@/pages/admin/admin-dashboard";
+import AdminDashboard from "@/pages/admin/dashboard";
 import NotFound from "@/pages/not-found";
 import { Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -914,6 +914,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/dashboard/stats", requireRole("system_admin"), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const departments = await storage.getAllDepartments();
+      const leaveTypes = await storage.getAllLeaveTypes();
+      const expenseCategories = await storage.getAllExpenseCategories();
+      
+      const stats = {
+        totalUsers: users.length,
+        totalDepartments: departments.length,
+        leaveTypesConfigured: leaveTypes.length,
+        expenseCategoriesConfigured: expenseCategories.length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch admin dashboard stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
