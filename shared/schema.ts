@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, date, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, date, pgEnum, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -12,13 +12,27 @@ export const expenseStatusEnum = pgEnum("expense_status", ["pending", "approved"
 export const jobStatusEnum = pgEnum("job_status", ["active", "closed"]);
 export const candidateStageEnum = pgEnum("candidate_stage", ["applied", "screening", "interview", "offer", "hired", "rejected"]);
 
-// Users table (for authentication)
+// Session storage table (required for Replit Auth)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Users table (for authentication with Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   role: roleEnum("role").notNull().default("employee"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Departments
@@ -200,7 +214,7 @@ export const candidates = pgTable("candidates", {
 });
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true });
 export const insertAttendanceDeviceSchema = createInsertSchema(attendanceDevices).omit({ id: true, createdAt: true, lastSyncAt: true });
@@ -220,6 +234,7 @@ export const insertCandidateSchema = createInsertSchema(candidates).omit({ id: t
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type UpsertUser = typeof users.$inferInsert;
 
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;

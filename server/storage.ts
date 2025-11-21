@@ -7,6 +7,7 @@ export interface IStorage {
   getUser(id: string): Promise<schema.User | undefined>;
   getUserByEmail(email: string): Promise<schema.User | undefined>;
   createUser(user: schema.InsertUser): Promise<schema.User>;
+  upsertUser(user: schema.UpsertUser): Promise<schema.User>;
   
   // Departments
   getAllDepartments(): Promise<schema.Department[]>;
@@ -101,6 +102,21 @@ export class DbStorage implements IStorage {
   async createUser(user: schema.InsertUser) {
     const [newUser] = await db.insert(schema.users).values(user).returning();
     return newUser;
+  }
+
+  async upsertUser(userData: schema.UpsertUser) {
+    const [user] = await db
+      .insert(schema.users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: schema.users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   // Departments
