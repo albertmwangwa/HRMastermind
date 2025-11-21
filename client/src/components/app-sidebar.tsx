@@ -213,7 +213,12 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
-                const isActive = location === item.url;
+                // Exact match or starts with the URL path (for sub-routes)
+                const isActive = 
+                  location === item.url || 
+                  (item.url !== "/" && location.startsWith(item.url + "/")) ||
+                  (item.url !== "/" && location.startsWith(item.url) && location.length > item.url.length);
+                
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
