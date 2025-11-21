@@ -10,12 +10,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // ========== AUTH ROUTES ==========
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+  app.get("/api/auth/user", async (req: any, res) => {
     try {
+      if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+        return res.json(null);
+      }
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.json(null);
       }
       res.json(user);
     } catch (error) {
@@ -583,13 +586,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceLogs = await storage.getAttendanceLogsByDate(today);
       
       const stats = {
-        totalEmployees: employees.length,
-        activeEmployees: employees.filter(e => e.status === "active").length,
-        todayAttendance: attendanceLogs.length,
-        pendingLeaves: leaveRequests.filter(r => r.status === "pending").length,
-        pendingExpenses: expenseClaims.filter(c => c.status === "pending").length,
+        totalEmployees: employees.filter(e => e.status === "active").length,
+        presentToday: attendanceLogs.length,
         pendingApprovals: leaveRequests.filter(r => r.status === "pending").length + 
-                         expenseClaims.filter(c => c.status === "pending").length
+                         expenseClaims.filter(c => c.status === "pending").length,
+        payrollThisMonth: "$0"
       };
       
       res.json(stats);
