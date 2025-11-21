@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2, Search, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,11 +50,23 @@ const roleLabels: Record<string, string> = {
   employee: "Employee",
 };
 
-const userFormSchema = z.object({
+const createUserFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]),
+  departmentId: z.string().optional(),
+});
+
+const updateUserFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.preprocess(
+    (val) => val === "" ? undefined : val,
+    z.string().min(6, "Password must be at least 6 characters").optional()
+  ),
   role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]),
   departmentId: z.string().optional(),
 });
@@ -74,8 +86,9 @@ export default function UserManagement() {
     queryKey: ["/api/departments"],
   });
 
-  const form = useForm<z.infer<typeof userFormSchema>>({
-    resolver: zodResolver(userFormSchema),
+  // Use separate forms for create and edit to ensure proper validation
+  const createForm = useForm<z.infer<typeof createUserFormSchema>>({
+    resolver: zodResolver(createUserFormSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -86,8 +99,23 @@ export default function UserManagement() {
     },
   });
 
+  const updateForm = useForm<z.infer<typeof updateUserFormSchema>>({
+    resolver: zodResolver(updateUserFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      role: "employee",
+      departmentId: "none",
+    },
+  });
+
+  // Use a unified form interface for the UI
+  const form = editingUser ? updateForm : (createForm as any);
+
   const createMutation = useMutation({
-    mutationFn: (data: z.infer<typeof userFormSchema>) =>
+    mutationFn: (data: z.infer<typeof createUserFormSchema>) =>
       apiRequest("POST", "/api/admin/users", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -96,7 +124,7 @@ export default function UserManagement() {
         description: "User created and credentials sent via email",
       });
       setIsDialogOpen(false);
-      form.reset();
+      createForm.reset();
       setShowPassword(false);
     },
     onError: (error: any) => {
@@ -109,7 +137,7 @@ export default function UserManagement() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & z.infer<typeof userFormSchema>) =>
+    mutationFn: ({ id, ...data }: { id: string } & z.infer<typeof updateUserFormSchema>) =>
       apiRequest("PUT", `/api/admin/users/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -119,7 +147,7 @@ export default function UserManagement() {
       });
       setIsDialogOpen(false);
       setEditingUser(null);
-      form.reset();
+      updateForm.reset();
       setShowPassword(false);
     },
     onError: (error: any) => {
@@ -149,6 +177,7 @@ export default function UserManagement() {
     },
   });
 
+
   const filteredUsers = users.filter((user) => {
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
     const searchLower = searchQuery.toLowerCase();
@@ -160,7 +189,7 @@ export default function UserManagement() {
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.reset({
+    updateForm.reset({
       firstName: user.firstName || "",
       lastName: user.lastName || "",
       email: user.email || "",
@@ -174,7 +203,7 @@ export default function UserManagement() {
 
   const handleAdd = () => {
     setEditingUser(null);
-    form.reset({
+    createForm.reset({
       firstName: "",
       lastName: "",
       email: "",
@@ -186,11 +215,12 @@ export default function UserManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (data: z.infer<typeof userFormSchema>) => {
-    const submitData = {
-      ...data,
-      departmentId: data.departmentId === "none" ? undefined : data.departmentId,
-    };
+  const handleSubmit = (data: any) => {
+    // Remove empty password from update requests
+    const submitData = { ...data };
+    if (editingUser && (!submitData.password || submitData.password === "")) {
+      delete submitData.password;
+    }
     
     if (editingUser) {
       updateMutation.mutate({ id: editingUser.id, ...submitData });
@@ -230,7 +260,7 @@ export default function UserManagement() {
                 {editingUser ? "Update user information and permissions" : "Create a new user account with role and department"}
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
+            <Form {...form} key={editingUser ? `edit-${editingUser.id}` : 'create'}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -295,9 +325,9 @@ export default function UserManagement() {
                         {editingUser ? "New Password (Optional)" : "Password"}
                       </FormLabel>
                       <div className="space-y-2">
-                        {editingUser && editingUser.passwordHash && (
+                        {editingUser && (
                           <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                            Current hash: {editingUser.passwordHash.substring(0, 20)}...
+                            Current password is set. Leave blank to keep current password.
                           </div>
                         )}
                         <div className="relative">

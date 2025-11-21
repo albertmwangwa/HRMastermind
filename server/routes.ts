@@ -113,18 +113,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users", requireRole("system_admin"), async (req, res) => {
     try {
-      const { password, ...userData } = req.body;
-      
-      if (!password) {
-        return res.status(400).json({ error: "Password is required for new users" });
-      }
-
-      const passwordHash = await bcrypt.hash(password, 10);
-      const validated = schema.insertUserSchema.parse({
-        ...userData,
-        passwordHash,
+      // Validate request body with password
+      const requestSchema = z.object({
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        email: z.string().email("Invalid email address"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]),
+        departmentId: z.string().optional(),
       });
       
+      const { password, departmentId, ...userData } = requestSchema.parse(req.body);
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Prepare data for storage (convert "none" to undefined)
+      const storageData = {
+        ...userData,
+        passwordHash,
+        departmentId: departmentId === "none" ? undefined : departmentId,
+      };
+      
+      const validated = schema.insertUserSchema.parse(storageData);
       const user = await storage.createUser(validated);
       
       // Send credential email
@@ -153,14 +164,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/users/:id", requireRole("system_admin"), async (req, res) => {
     try {
-      const { password, ...userData } = req.body;
+      // Validate request body with optional password
+      const requestSchema = z.object({
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        password: z.string().min(6).optional(),
+        role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]).optional(),
+        departmentId: z.string().optional(),
+      });
       
-      let updateData: any = userData;
+      const { password, departmentId, ...userData } = requestSchema.parse(req.body);
+      
+      // Prepare update data
+      let updateData: any = { ...userData };
       
       // If password is provided, hash it
       if (password) {
-        const passwordHash = await bcrypt.hash(password, 10);
-        updateData.passwordHash = passwordHash;
+        updateData.passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      // Convert "none" to undefined for departmentId
+      if (departmentId !== undefined) {
+        updateData.departmentId = departmentId === "none" ? undefined : departmentId;
       }
       
       const validated = schema.insertUserSchema.partial().parse(updateData);
