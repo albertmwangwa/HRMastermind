@@ -191,7 +191,13 @@ function AppContent() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/logout', { method: 'POST' });
+                      } finally {
+                        window.location.href = '/login';
+                      }
+                    }}
                     data-testid="menu-logout"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
