@@ -79,7 +79,26 @@ Preferred communication style: Simple, everyday language.
 - Session storage in PostgreSQL using connect-pg-simple
 - Token management with access tokens and refresh tokens
 - User claims stored in session for authorization
-- Role-based access control (admin, manager, employee)
+
+**Role-Based Access Control (RBAC) - Production Ready:**
+- Four-tier role system: system_admin, hr_manager, department_manager, employee
+- Backend middleware: `requireRole(...roles)` protects all write operations
+- Frontend route guards: `RequireRole` component restricts UI access
+- Security hardening: All privilege escalation paths closed, no unsecured alternate routes
+
+**RBAC Implementation Details:**
+- Admin routes (`/api/admin/*`): system_admin only - user management, departments, leave types, expense categories
+- HR operations: hr_manager required - employee CRUD, recruitment, payroll, reports
+- Approval workflows: hr_manager OR department_manager - leave/expense approvals
+- Department-specific access: department managers filtered by departmentId (pending implementation)
+- Self-service portal: employee role - personal profile, attendance, leave, expenses (pending implementation)
+
+**Admin Configuration (Completed):**
+- User Management: Create/update/delete users with role assignment and department linking
+- Department Configuration: Manage organizational structure with CRUD operations
+- Leave Types Configuration: Define PTO types, accrual rules, and approval workflows
+- Expense Categories Configuration: Set up reimbursement categories and approval limits
+- All forms use React Hook Form with Zod validation and proper error handling
 
 **Session Management:**
 - 7-day session TTL with HTTP-only secure cookies
