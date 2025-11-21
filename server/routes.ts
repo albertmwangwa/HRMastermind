@@ -77,6 +77,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== EMPLOYEE REQUESTS MODULE ==========
+  // Get all employee requests (HR sees all, Dept Manager sees only their own)
+  app.get("/api/employee-requests", requireRole("hr_manager", "department_manager"), async (req, res) => {
+    try {
+      const user = req.user as schema.User;
+      let requests;
+      
+      if (user.role === "hr_manager") {
+        requests = await storage.getAllEmployeeRequests();
+      } else {
+        // Department managers only see their own requests
+        requests = await storage.getEmployeeRequestsByUser(user.id);
+      }
+      
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee requests" });
+    }
+  });
+
+  // Get a specific employee request
+  app.get("/api/employee-requests/:id", requireRole("hr_manager", "department_manager"), async (req, res) => {
+    try {
+      const request = await storage.getEmployeeRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Employee request not found" });
+      }
+      
+      const user = req.user as schema.User;
+      // Department managers can only view their own requests
+      if (user.role === "department_manager" && request.requestedById !== user.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee request" });
+    }
+  });
+
+  // Create a new employee request (Department Manager only)
+  app.post("/api/employee-requests", requireRole("department_manager"), async (req, res) => {
+    try {
+      const user = req.user as schema.User;
+      
+      // Validate request body
+      const requestSchema = z.object({
+        requestType: z.enum(["new_employee", "transfer"]),
+        requestData: z.object({}).passthrough(), // Allow any structure for flexible data
+      });
+      
+      const validated = requestSchema.parse(req.body);
+      
+      // Create the request with the current user as requestedBy
+      const requestData: schema.InsertEmployeeRequest = {
+        requestType: validated.requestType,
+        requestedById: user.id,
+        requestData: validated.requestData,
+        status: "pending",
+      };
+      
+      const newRequest = await storage.createEmployeeRequest(requestData);
+      res.status(201).json(newRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create employee request" });
+      }
+    }
+  });
+
+  // Update employee request status (HR Manager only)
+  app.patch("/api/employee-requests/:id/status", requireRole("hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as schema.User;
+      
+      // Validate request body
+      const statusSchema = z.object({
+        status: z.enum(["approved", "rejected"]),
+        notes: z.string().optional(),
+      });
+      
+      const { status, notes } = statusSchema.parse(req.body);
+      
+      // Update the request status
+      const updated = await storage.updateEmployeeRequestStatus(
+        req.params.id,
+        status,
+        user.id,
+        notes
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Employee request not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update employee request status" });
+      }
+    }
+  });
+
   // ========== DEPARTMENTS MODULE ==========
   app.get("/api/departments", async (req, res) => {
     try {
