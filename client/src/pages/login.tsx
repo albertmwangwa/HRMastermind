@@ -38,8 +38,15 @@ export default function Login() {
         throw new Error(error.error || "Login failed");
       }
 
-      // Redirect to dashboard on successful login
-      window.location.href = "/";
+      // Get user data from response
+      const userData = await response.json();
+      
+      // Redirect based on user role
+      if (userData.role === "system_admin") {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/";
+      }
     } catch (error) {
       toast({
         title: "Login Failed",
