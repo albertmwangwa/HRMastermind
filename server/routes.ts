@@ -115,6 +115,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== ADMIN MODULE - User Management ==========
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const validated = schema.insertUserSchema.parse(req.body);
+      const user = await storage.createUser(validated);
+      res.status(201).json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create user" });
+      }
+    }
+  });
+
+  app.put("/api/admin/users/:id", async (req, res) => {
+    try {
+      const validated = schema.insertUserSchema.partial().parse(req.body);
+      const user = await storage.updateUser(req.params.id, validated);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update user" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // ========== ADMIN MODULE - Department Management ==========
+  app.put("/api/admin/departments/:id", async (req, res) => {
+    try {
+      const validated = schema.insertDepartmentSchema.partial().parse(req.body);
+      const department = await storage.updateDepartment(req.params.id, validated);
+      if (!department) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      res.json(department);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update department" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/departments/:id", async (req, res) => {
+    try {
+      await storage.deleteDepartment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete department" });
+    }
+  });
+
+  // ========== ADMIN MODULE - Leave Types Management ==========
+  app.get("/api/admin/leave-types", async (req, res) => {
+    try {
+      const types = await storage.getAllLeaveTypes();
+      res.json(types);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leave types" });
+    }
+  });
+
+  app.post("/api/admin/leave-types", async (req, res) => {
+    try {
+      const validated = schema.insertLeaveTypeSchema.parse(req.body);
+      const type = await storage.createLeaveType(validated);
+      res.status(201).json(type);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create leave type" });
+      }
+    }
+  });
+
+  app.put("/api/admin/leave-types/:id", async (req, res) => {
+    try {
+      const validated = schema.insertLeaveTypeSchema.partial().parse(req.body);
+      const type = await storage.updateLeaveType(req.params.id, validated);
+      if (!type) {
+        return res.status(404).json({ error: "Leave type not found" });
+      }
+      res.json(type);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update leave type" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/leave-types/:id", async (req, res) => {
+    try {
+      await storage.deleteLeaveType(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete leave type" });
+    }
+  });
+
+  // ========== ADMIN MODULE - Expense Categories Management ==========
+  app.get("/api/admin/expense-categories", async (req, res) => {
+    try {
+      const categories = await storage.getAllExpenseCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch expense categories" });
+    }
+  });
+
+  app.post("/api/admin/expense-categories", async (req, res) => {
+    try {
+      const validated = schema.insertExpenseCategorySchema.parse(req.body);
+      const category = await storage.createExpenseCategory(validated);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create expense category" });
+      }
+    }
+  });
+
+  app.put("/api/admin/expense-categories/:id", async (req, res) => {
+    try {
+      const validated = schema.insertExpenseCategorySchema.partial().parse(req.body);
+      const category = await storage.updateExpenseCategory(req.params.id, validated);
+      if (!category) {
+        return res.status(404).json({ error: "Expense category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update expense category" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/expense-categories/:id", async (req, res) => {
+    try {
+      await storage.deleteExpenseCategory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete expense category" });
+    }
+  });
+
   // ========== ATTENDANCE DEVICES MODULE (Admin/Manager for mutations) ==========
   app.get("/api/devices", async (req, res) => {
     try {

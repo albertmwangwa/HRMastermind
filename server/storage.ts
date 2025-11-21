@@ -6,12 +6,18 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<schema.User | undefined>;
   getUserByEmail(email: string): Promise<schema.User | undefined>;
+  getAllUsers(): Promise<schema.User[]>;
   createUser(user: schema.InsertUser): Promise<schema.User>;
   upsertUser(user: schema.UpsertUser): Promise<schema.User>;
+  updateUser(id: string, user: Partial<schema.InsertUser>): Promise<schema.User | undefined>;
+  deleteUser(id: string): Promise<void>;
   
   // Departments
   getAllDepartments(): Promise<schema.Department[]>;
+  getDepartment(id: string): Promise<schema.Department | undefined>;
   createDepartment(dept: schema.InsertDepartment): Promise<schema.Department>;
+  updateDepartment(id: string, dept: Partial<schema.InsertDepartment>): Promise<schema.Department | undefined>;
+  deleteDepartment(id: string): Promise<void>;
   
   // Employees
   getAllEmployees(): Promise<schema.Employee[]>;
@@ -33,7 +39,10 @@ export interface IStorage {
   
   // Leave Types
   getAllLeaveTypes(): Promise<schema.LeaveType[]>;
+  getLeaveType(id: string): Promise<schema.LeaveType | undefined>;
   createLeaveType(type: schema.InsertLeaveType): Promise<schema.LeaveType>;
+  updateLeaveType(id: string, type: Partial<schema.InsertLeaveType>): Promise<schema.LeaveType | undefined>;
+  deleteLeaveType(id: string): Promise<void>;
   
   // Leave Requests
   getAllLeaveRequests(): Promise<schema.LeaveRequest[]>;
@@ -43,7 +52,10 @@ export interface IStorage {
   
   // Expense Categories
   getAllExpenseCategories(): Promise<schema.ExpenseCategory[]>;
+  getExpenseCategory(id: string): Promise<schema.ExpenseCategory | undefined>;
   createExpenseCategory(category: schema.InsertExpenseCategory): Promise<schema.ExpenseCategory>;
+  updateExpenseCategory(id: string, category: Partial<schema.InsertExpenseCategory>): Promise<schema.ExpenseCategory | undefined>;
+  deleteExpenseCategory(id: string): Promise<void>;
   
   // Expense Claims
   getAllExpenseClaims(): Promise<schema.ExpenseClaim[]>;
@@ -119,14 +131,49 @@ export class DbStorage implements IStorage {
     return user;
   }
 
+  async getAllUsers() {
+    return await db.select().from(schema.users).orderBy(desc(schema.users.createdAt));
+  }
+
+  async updateUser(id: string, userData: Partial<schema.InsertUser>) {
+    const [updated] = await db
+      .update(schema.users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(schema.users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUser(id: string) {
+    await db.delete(schema.users).where(eq(schema.users.id, id));
+  }
+
   // Departments
   async getAllDepartments() {
     return await db.select().from(schema.departments);
   }
 
+  async getDepartment(id: string) {
+    const [dept] = await db.select().from(schema.departments).where(eq(schema.departments.id, id));
+    return dept;
+  }
+
   async createDepartment(dept: schema.InsertDepartment) {
     const [newDept] = await db.insert(schema.departments).values(dept).returning();
     return newDept;
+  }
+
+  async updateDepartment(id: string, deptData: Partial<schema.InsertDepartment>) {
+    const [updated] = await db
+      .update(schema.departments)
+      .set(deptData)
+      .where(eq(schema.departments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDepartment(id: string) {
+    await db.delete(schema.departments).where(eq(schema.departments.id, id));
   }
 
   // Employees
@@ -194,9 +241,27 @@ export class DbStorage implements IStorage {
     return await db.select().from(schema.leaveTypes);
   }
 
+  async getLeaveType(id: string) {
+    const [type] = await db.select().from(schema.leaveTypes).where(eq(schema.leaveTypes.id, id));
+    return type;
+  }
+
   async createLeaveType(type: schema.InsertLeaveType) {
     const [newType] = await db.insert(schema.leaveTypes).values(type).returning();
     return newType;
+  }
+
+  async updateLeaveType(id: string, typeData: Partial<schema.InsertLeaveType>) {
+    const [updated] = await db
+      .update(schema.leaveTypes)
+      .set(typeData)
+      .where(eq(schema.leaveTypes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLeaveType(id: string) {
+    await db.delete(schema.leaveTypes).where(eq(schema.leaveTypes.id, id));
   }
 
   // Leave Requests
@@ -225,9 +290,27 @@ export class DbStorage implements IStorage {
     return await db.select().from(schema.expenseCategories);
   }
 
+  async getExpenseCategory(id: string) {
+    const [category] = await db.select().from(schema.expenseCategories).where(eq(schema.expenseCategories.id, id));
+    return category;
+  }
+
   async createExpenseCategory(category: schema.InsertExpenseCategory) {
     const [newCategory] = await db.insert(schema.expenseCategories).values(category).returning();
     return newCategory;
+  }
+
+  async updateExpenseCategory(id: string, categoryData: Partial<schema.InsertExpenseCategory>) {
+    const [updated] = await db
+      .update(schema.expenseCategories)
+      .set(categoryData)
+      .where(eq(schema.expenseCategories.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteExpenseCategory(id: string) {
+    await db.delete(schema.expenseCategories).where(eq(schema.expenseCategories.id, id));
   }
 
   // Expense Claims
