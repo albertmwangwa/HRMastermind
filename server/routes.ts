@@ -3,11 +3,22 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as schema from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireRole } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
+
+  // Protect all API routes except authentication endpoints
+  app.use("/api/*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api/login") || 
+        req.originalUrl.startsWith("/api/callback") || 
+        req.originalUrl.startsWith("/api/logout") ||
+        req.originalUrl === "/api/auth/user") {
+      return next();
+    }
+    return isAuthenticated(req, res, next);
+  });
 
   // ========== AUTH ROUTES ==========
   app.get("/api/auth/user", async (req: any, res) => {
@@ -104,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== ATTENDANCE DEVICES MODULE ==========
+  // ========== ATTENDANCE DEVICES MODULE (Admin/Manager for mutations) ==========
   app.get("/api/devices", async (req, res) => {
     try {
       const devices = await storage.getAllDevices();
@@ -126,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/devices", async (req, res) => {
+  app.post("/api/devices", requireRole("admin", "manager"), async (req, res) => {
     try {
       const validated = schema.insertAttendanceDeviceSchema.parse(req.body);
       const device = await storage.createDevice(validated);
@@ -140,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/devices/:id/status", async (req, res) => {
+  app.patch("/api/devices/:id/status", requireRole("admin", "manager"), async (req, res) => {
     try {
       const statusSchema = z.object({
         status: z.enum(["online", "offline"])
@@ -157,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/devices/:id/sync", async (req, res) => {
+  app.post("/api/devices/:id/sync", requireRole("admin", "manager"), async (req, res) => {
     try {
       await storage.updateDeviceLastSync(req.params.id);
       res.json({ message: "Device synced successfully" });
@@ -251,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/leave/requests/:id/approve", async (req, res) => {
+  app.patch("/api/leave/requests/:id/approve", requireRole("admin", "manager"), async (req, res) => {
     try {
       const reviewerSchema = z.object({
         reviewerId: z.string()
@@ -268,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/leave/requests/:id/reject", async (req, res) => {
+  app.patch("/api/leave/requests/:id/reject", requireRole("admin", "manager"), async (req, res) => {
     try {
       const reviewerSchema = z.object({
         reviewerId: z.string()
@@ -332,7 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/expenses/claims/:id/approve", async (req, res) => {
+  app.patch("/api/expenses/claims/:id/approve", requireRole("admin", "manager"), async (req, res) => {
     try {
       const reviewerSchema = z.object({
         reviewerId: z.string()
@@ -349,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/expenses/claims/:id/reject", async (req, res) => {
+  app.patch("/api/expenses/claims/:id/reject", requireRole("admin", "manager"), async (req, res) => {
     try {
       const reviewerSchema = z.object({
         reviewerId: z.string()
@@ -453,8 +464,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== PAYROLL MODULE ==========
-  app.get("/api/payroll/salary-configs/:employeeId", async (req, res) => {
+  // ========== PAYROLL MODULE (Admin/Manager only) ==========
+  app.get("/api/payroll/salary-configs/:employeeId", requireRole("admin", "manager"), async (req, res) => {
     try {
       const config = await storage.getSalaryConfig(req.params.employeeId);
       if (!config) {
@@ -466,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payroll/salary-configs", async (req, res) => {
+  app.post("/api/payroll/salary-configs", requireRole("admin", "manager"), async (req, res) => {
     try {
       const validated = schema.insertSalaryConfigSchema.parse(req.body);
       const config = await storage.createOrUpdateSalaryConfig(validated);
@@ -480,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/payroll/records", async (req, res) => {
+  app.get("/api/payroll/records", requireRole("admin", "manager"), async (req, res) => {
     try {
       const records = await storage.getAllPayrollRecords();
       res.json(records);
@@ -489,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payroll/process", async (req, res) => {
+  app.post("/api/payroll/process", requireRole("admin", "manager"), async (req, res) => {
     try {
       const processSchema = z.object({
         employeeId: z.string(),
@@ -511,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== RECRUITMENT MODULE ==========
+  // ========== RECRUITMENT MODULE (Admin/Manager for management) ==========
   app.get("/api/recruitment/jobs", async (req, res) => {
     try {
       const jobs = await storage.getAllJobPostings();
@@ -521,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/recruitment/jobs", async (req, res) => {
+  app.post("/api/recruitment/jobs", requireRole("admin", "manager"), async (req, res) => {
     try {
       const validated = schema.insertJobPostingSchema.parse(req.body);
       const job = await storage.createJobPosting(validated);
@@ -535,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/recruitment/candidates", async (req, res) => {
+  app.get("/api/recruitment/candidates", requireRole("admin", "manager"), async (req, res) => {
     try {
       const candidates = await storage.getAllCandidates();
       res.json(candidates);
@@ -558,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/recruitment/candidates/:id/stage", async (req, res) => {
+  app.patch("/api/recruitment/candidates/:id/stage", requireRole("admin", "manager"), async (req, res) => {
     try {
       const stageSchema = z.object({
         stage: z.enum(["applied", "screening", "interview", "offer", "hired", "rejected"])
