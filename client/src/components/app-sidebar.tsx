@@ -213,10 +213,20 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
-                // Exact match or starts with the URL path followed by a slash (for sub-routes)
-                const isActive = 
-                  location === item.url || 
-                  (item.url !== "/" && location.startsWith(item.url + "/"));
+                // Normalize paths (remove trailing slashes)
+                const normalizedLocation = location === "/" ? "/" : location.replace(/\/$/, "");
+                const normalizedItemUrl = item.url === "/" ? "/" : item.url.replace(/\/$/, "");
+                
+                // Find the best match: exact match or longest prefix match
+                const matches = menuItems.filter(menuItem => {
+                  const normalizedMenuUrl = menuItem.url === "/" ? "/" : menuItem.url.replace(/\/$/, "");
+                  return normalizedLocation === normalizedMenuUrl || 
+                         (normalizedMenuUrl !== "/" && normalizedLocation.startsWith(normalizedMenuUrl + "/"));
+                });
+                
+                // Sort by length to get the longest match
+                const longestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
+                const isActive = longestMatch && normalizedItemUrl === (longestMatch.url === "/" ? "/" : longestMatch.url.replace(/\/$/, ""));
                 
                 return (
                   <SidebarMenuItem key={item.title}>
