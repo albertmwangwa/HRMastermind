@@ -57,7 +57,7 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/attendance")}
+          onClick={() => navigate("/admin/devices")}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -248,7 +248,7 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
       </Tabs>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => navigate("/attendance")} data-testid="button-cancel">
+        <Button variant="outline" onClick={() => navigate("/admin/devices")} data-testid="button-cancel">
           Cancel
         </Button>
         <Button onClick={handleSave} data-testid="button-save">
