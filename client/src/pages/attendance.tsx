@@ -2,7 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Clock, Plus, Filter } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -13,6 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 
 //todo: remove mock functionality
 const attendanceRecords = [
@@ -24,6 +37,14 @@ const attendanceRecords = [
 
 export default function Attendance() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [department, setDepartment] = useState("all");
+  const [location, setLocation] = useState("all");
+  const [company, setCompany] = useState("all");
+  const [timePeriod, setTimePeriod] = useState("today");
   const [, navigate] = useLocation();
 
   return (
@@ -56,7 +77,108 @@ export default function Attendance() {
         <TabsContent value="records">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Today's Attendance</CardTitle>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <CardTitle className="text-lg">Attendance Records</CardTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={timePeriod} onValueChange={setTimePeriod}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-time-period">
+                      <SelectValue placeholder="Time Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="this-week">This Week</SelectItem>
+                      <SelectItem value="this-month">This Month</SelectItem>
+                      <SelectItem value="last-week">Last Week</SelectItem>
+                      <SelectItem value="last-month">Last Month</SelectItem>
+                      <SelectItem value="custom">Custom Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {timePeriod === "custom" && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="justify-start text-left" data-testid="button-date-range">
+                          {dateRange.from ? (
+                            dateRange.to ? (
+                              <>
+                                {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd, yyyy")}
+                              </>
+                            ) : (
+                              format(dateRange.from, "MMM dd, yyyy")
+                            )
+                          ) : (
+                            "Select dates"
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <div className="p-3 space-y-2">
+                          <div>
+                            <p className="text-sm font-medium mb-2">From</p>
+                            <Calendar
+                              mode="single"
+                              selected={dateRange.from}
+                              onSelect={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+                              data-testid="calendar-from"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium mb-2">To</p>
+                            <Calendar
+                              mode="single"
+                              selected={dateRange.to}
+                              onSelect={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+                              data-testid="calendar-to"
+                            />
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  <Select value={department} onValueChange={setDepartment}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-department">
+                      <SelectValue placeholder="Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Departments</SelectItem>
+                      <SelectItem value="engineering">Engineering</SelectItem>
+                      <SelectItem value="sales">Sales</SelectItem>
+                      <SelectItem value="hr">HR</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={location} onValueChange={setLocation}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-location">
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Locations</SelectItem>
+                      <SelectItem value="hq">Headquarters</SelectItem>
+                      <SelectItem value="branch-a">Branch A</SelectItem>
+                      <SelectItem value="branch-b">Branch B</SelectItem>
+                      <SelectItem value="warehouse">Warehouse</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={company} onValueChange={setCompany}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-company">
+                      <SelectValue placeholder="Company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      <SelectItem value="main">Main Company</SelectItem>
+                      <SelectItem value="subsidiary-a">Subsidiary A</SelectItem>
+                      <SelectItem value="subsidiary-b">Subsidiary B</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button variant="outline" size="icon" data-testid="button-reset-filters">
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
