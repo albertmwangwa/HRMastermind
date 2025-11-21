@@ -486,50 +486,66 @@ export class DbStorage implements IStorage {
     return updated;
   }
 
-  // Atomic approval: creates employee and updates request status in one operation
+  // Atomic approval: creates employee and updates request status in a database transaction
   async approveEmployeeRequest(requestId: string, approverId: string, notes?: string) {
-    const request = await this.getEmployeeRequest(requestId);
-    if (!request) {
-      throw new Error("Request not found");
-    }
-    
-    if (request.status !== "pending") {
-      throw new Error(`Request already ${request.status}`);
-    }
-    
-    // Extract employee data from request
-    const employeeData = request.requestData as any;
-    
-    // Create employee (database will enforce unique email constraint)
-    const newEmployee = await this.createEmployee({
-      firstName: employeeData.firstName,
-      lastName: employeeData.lastName,
-      email: employeeData.email,
-      phone: employeeData.phone,
-      departmentId: employeeData.departmentId,
-      role: employeeData.role,
-      biometricId: employeeData.biometricId,
-      status: employeeData.status || "active",
-      joiningDate: employeeData.joiningDate,
-      userId: undefined,
+    // Use database transaction to ensure atomicity
+    return await db.transaction(async (tx) => {
+      // Fetch and validate request within transaction
+      const [request] = await tx
+        .select()
+        .from(schema.employeeRequests)
+        .where(eq(schema.employeeRequests.id, requestId))
+        .limit(1);
+      
+      if (!request) {
+        throw new Error("Request not found");
+      }
+      
+      if (request.status !== "pending") {
+        throw new Error(`Request already ${request.status}`);
+      }
+      
+      // Extract employee data from request
+      const employeeData = request.requestData as any;
+      
+      // Create employee within transaction (unique constraint will be enforced)
+      const [newEmployee] = await tx
+        .insert(schema.employees)
+        .values({
+          firstName: employeeData.firstName,
+          lastName: employeeData.lastName,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          departmentId: employeeData.departmentId,
+          role: employeeData.role,
+          biometricId: employeeData.biometricId,
+          status: employeeData.status || "active",
+          joiningDate: employeeData.joiningDate,
+          userId: undefined,
+        })
+        .returning();
+      
+      // Update request status within same transaction
+      const [updatedRequest] = await tx
+        .update(schema.employeeRequests)
+        .set({
+          status: "approved" as const,
+          approvedById: approverId,
+          approvalNotes: notes,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(schema.employeeRequests.id, requestId))
+        .returning();
+      
+      if (!updatedRequest) {
+        throw new Error("Failed to update request status");
+      }
+      
+      return {
+        request: updatedRequest,
+        employee: newEmployee,
+      };
     });
-    
-    // Update request status (only if employee creation succeeded)
-    const updatedRequest = await this.updateEmployeeRequestStatus(
-      requestId,
-      "approved",
-      approverId,
-      notes
-    );
-    
-    if (!updatedRequest) {
-      throw new Error("Failed to update request status");
-    }
-    
-    return {
-      request: updatedRequest,
-      employee: newEmployee,
-    };
   }
 }
 
