@@ -121,9 +121,9 @@ function Router() {
             )}
           </Route>
           <Route path="/admin/device/:id">
-            {() => (
+            {(params) => (
               <RequireRole allowedRoles={["system_admin"]}>
-                <DeviceConfiguration />
+                <DeviceConfiguration params={params} />
               </RequireRole>
             )}
           </Route>
