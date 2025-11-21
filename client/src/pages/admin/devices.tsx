@@ -1,9 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { Server, RefreshCw, Settings, Plus } from "lucide-react";
+import { Server, RefreshCw, Settings, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 //todo: remove mock functionality
 const devices = [
@@ -15,6 +25,8 @@ const devices = [
 
 export default function AdminDevices() {
   const [syncing, setSyncing] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deviceToDelete, setDeviceToDelete] = useState<number | null>(null);
   const [, navigate] = useLocation();
 
   const handleSyncAll = () => {
@@ -24,6 +36,18 @@ export default function AdminDevices() {
       setSyncing(false);
       console.log("Sync completed");
     }, 2000);
+  };
+
+  const handleDeleteClick = (deviceId: number) => {
+    setDeviceToDelete(deviceId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    console.log("Deleting device:", deviceToDelete);
+    // TODO: Call API to delete device
+    setDeleteDialogOpen(false);
+    setDeviceToDelete(null);
   };
 
   return (
@@ -52,9 +76,18 @@ export default function AdminDevices() {
         {devices.map((device) => (
           <Card key={device.id} className="hover-elevate" data-testid={`device-${device.id}`}>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">{device.name}</CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base font-semibold flex-1">{device.name}</CardTitle>
                 <StatusBadge status={device.status} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleDeleteClick(device.id)}
+                  data-testid={`button-delete-${device.id}`}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -116,6 +149,28 @@ export default function AdminDevices() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Device</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this device? This action cannot be undone.
+              All attendance records linked to this device will remain but the device configuration will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Delete Device
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
