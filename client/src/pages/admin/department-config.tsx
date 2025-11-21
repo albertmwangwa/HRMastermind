@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Users } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -10,40 +14,138 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Department } from "@shared/schema";
 
-//todo: remove mock functionality
-const mockDepartments = [
-  { id: "1", name: "Engineering", description: "Software development and IT operations", employeeCount: 45 },
-  { id: "2", name: "Sales", description: "Business development and client relations", employeeCount: 28 },
-  { id: "3", name: "Marketing", description: "Brand management and campaigns", employeeCount: 15 },
-  { id: "4", name: "HR", description: "Human resources and talent management", employeeCount: 8 },
-];
+const departmentFormSchema = z.object({
+  name: z.string().min(1, "Department name is required"),
+  description: z.string().optional(),
+});
 
 export default function DepartmentConfig() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDept, setEditingDept] = useState<any>(null);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const { toast } = useToast();
 
-  const handleEdit = (dept: any) => {
+  const { data: departments = [], isLoading } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
+  });
+
+  const form = useForm<z.infer<typeof departmentFormSchema>>({
+    resolver: zodResolver(departmentFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: z.infer<typeof departmentFormSchema>) => {
+      const payload = {
+        name: data.name,
+        description: data.description || undefined,
+      };
+      return apiRequest("POST", "/api/departments", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+      toast({
+        title: "Success",
+        description: "Department created successfully",
+      });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create department",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & z.infer<typeof departmentFormSchema>) =>
+      apiRequest("PUT", `/api/admin/departments/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+      toast({
+        title: "Success",
+        description: "Department updated successfully",
+      });
+      setIsDialogOpen(false);
+      setEditingDept(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update department",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/departments/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+      toast({
+        title: "Success",
+        description: "Department deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete department",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (dept: Department) => {
     setEditingDept(dept);
+    form.reset({
+      name: dept.name,
+      description: dept.description || "",
+    });
     setIsDialogOpen(true);
   };
 
   const handleAdd = () => {
     setEditingDept(null);
+    form.reset({
+      name: "",
+      description: "",
+    });
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
-    console.log("Department saved:", editingDept);
-    setIsDialogOpen(false);
-    setEditingDept(null);
+  const handleSubmit = (data: z.infer<typeof departmentFormSchema>) => {
+    if (editingDept) {
+      updateMutation.mutate({ id: editingDept.id, ...data });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const handleDelete = (deptId: string) => {
-    console.log("Delete department:", deptId);
+    if (confirm("Are you sure you want to delete this department?")) {
+      deleteMutation.mutate(deptId);
+    }
   };
 
   return (
@@ -71,83 +173,124 @@ export default function DepartmentConfig() {
                 {editingDept ? "Update department information" : "Create a new department"}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Department Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Engineering"
-                  defaultValue={editingDept?.name}
-                  data-testid="input-name"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="e.g., Engineering"
+                          data-testid="input-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Brief description of the department"
-                  rows={3}
-                  defaultValue={editingDept?.description}
-                  data-testid="textarea-description"
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Brief description of the department"
+                          rows={3}
+                          data-testid="textarea-description"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                data-testid="button-cancel"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit} data-testid="button-submit">
-                {editingDept ? "Save Changes" : "Create Department"}
-              </Button>
-            </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                    data-testid="button-submit"
+                  >
+                    {editingDept ? "Save Changes" : "Create Department"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockDepartments.map((dept) => (
-          <Card key={dept.id} data-testid={`card-department-${dept.id}`}>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>{dept.name}</span>
-                <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>{dept.employeeCount}</span>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="h-6 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-muted animate-pulse rounded mb-4" />
+                <div className="flex gap-2">
+                  <div className="h-9 bg-muted animate-pulse rounded flex-1" />
+                  <div className="h-9 bg-muted animate-pulse rounded flex-1" />
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{dept.description}</p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEdit(dept)}
-                  className="flex-1"
-                  data-testid={`button-edit-${dept.id}`}
-                >
-                  <Edit2 className="h-3 w-3 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDelete(dept.id)}
-                  className="flex-1"
-                  data-testid={`button-delete-${dept.id}`}
-                >
-                  <Trash2 className="h-3 w-3 mr-2" />
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {departments.map((dept) => (
+            <Card key={dept.id} data-testid={`card-department-${dept.id}`}>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <span>{dept.name}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {dept.description || "No description provided"}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(dept)}
+                    className="flex-1"
+                    data-testid={`button-edit-${dept.id}`}
+                  >
+                    <Edit2 className="h-3 w-3 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(dept.id)}
+                    disabled={deleteMutation.isPending}
+                    className="flex-1"
+                    data-testid={`button-delete-${dept.id}`}
+                  >
+                    <Trash2 className="h-3 w-3 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
