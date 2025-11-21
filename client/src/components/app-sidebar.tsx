@@ -13,6 +13,7 @@ import {
   Building2,
   UserCog,
   Briefcase,
+  Server,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +46,11 @@ const roleMenus = {
       title: "Departments",
       url: "/admin/departments",
       icon: Building2,
+    },
+    {
+      title: "Device Configuration",
+      url: "/admin/devices",
+      icon: Server,
     },
     {
       title: "Leave Types",
