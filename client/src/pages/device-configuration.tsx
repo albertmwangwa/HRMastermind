@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Zap, RotateCcw } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Save, Zap, RotateCcw, Upload, FileCode } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 
@@ -25,20 +26,57 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
     connectionMode: "tcp",
     timezone: "UTC",
     enableLogging: true,
+    apiScript: "",
   });
 
-  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "failed">("idle");
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "failed" | "timeout">("idle");
+  const [testMessage, setTestMessage] = useState("");
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     setTestStatus("testing");
-    // TODO: Call API to test device connection
-    setTimeout(() => {
-      setTestStatus("success");
-    }, 2000);
+    setTestMessage("");
+
+    try {
+      // Simulate real TCP connection test
+      const response = await fetch("/api/devices/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ipAddress: formData.ipAddress,
+          port: formData.port,
+          connectionMode: formData.connectionMode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.connected) {
+        setTestStatus("success");
+        setTestMessage(data.message || "Device is online and responding correctly.");
+      } else {
+        setTestStatus("failed");
+        setTestMessage(data.error || "Unable to connect to device. Please verify IP address and port.");
+      }
+    } catch (error) {
+      setTestStatus("timeout");
+      setTestMessage("Connection timeout. Device may be offline or network unreachable.");
+    }
+  };
+
+  const handleScriptImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setFormData(prev => ({ ...prev, apiScript: content }));
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleSyncEmployees = () => {
@@ -149,16 +187,24 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
                 data-testid="button-test-connection"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                {testStatus === "testing" ? "Testing..." : "Test Connection"}
+                {testStatus === "testing" ? "Testing Connection..." : "Test Connection"}
               </Button>
               {testStatus === "success" && (
-                <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg text-sm text-green-700 dark:text-green-300">
-                  Device connection successful! Device is online and responding.
+                <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg text-sm" data-testid="test-result-success">
+                  <div className="font-semibold text-green-700 dark:text-green-300 mb-1">✓ Connection Successful</div>
+                  <div className="text-green-600 dark:text-green-400">{testMessage}</div>
                 </div>
               )}
               {testStatus === "failed" && (
-                <div className="p-4 bg-red-50 dark:bg-red-950 rounded-lg text-sm text-red-700 dark:text-red-300">
-                  Connection failed. Please check IP address and port configuration.
+                <div className="p-4 bg-red-50 dark:bg-red-950 rounded-lg text-sm" data-testid="test-result-failed">
+                  <div className="font-semibold text-red-700 dark:text-red-300 mb-1">✗ Connection Failed</div>
+                  <div className="text-red-600 dark:text-red-400">{testMessage}</div>
+                </div>
+              )}
+              {testStatus === "timeout" && (
+                <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg text-sm" data-testid="test-result-timeout">
+                  <div className="font-semibold text-orange-700 dark:text-orange-300 mb-1">⚠ Connection Timeout</div>
+                  <div className="text-orange-600 dark:text-orange-400">{testMessage}</div>
                 </div>
               )}
             </CardContent>
@@ -213,6 +259,55 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
               </div>
             </CardContent>
           </Card>
+
+          {formData.connectionMode === "api" && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg">ZKTeco API Script</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="apiScript">API Script / Commands</Label>
+                  <Textarea
+                    id="apiScript"
+                    value={formData.apiScript}
+                    onChange={(e) => handleInputChange("apiScript", e.target.value)}
+                    placeholder="Enter ZKTeco API commands or script here..."
+                    className="font-mono text-sm min-h-[200px]"
+                    data-testid="textarea-api-script"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter API commands, scripts, or configuration for ZKTeco Server API integration
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById("script-file-input")?.click()}
+                    data-testid="button-import-script"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Script File
+                  </Button>
+                  <input
+                    id="script-file-input"
+                    type="file"
+                    accept=".txt,.js,.json,.xml"
+                    onChange={handleScriptImport}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => handleInputChange("apiScript", "")}
+                    data-testid="button-clear-script"
+                  >
+                    <FileCode className="h-4 w-4 mr-2" />
+                    Clear Script
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="sync">
