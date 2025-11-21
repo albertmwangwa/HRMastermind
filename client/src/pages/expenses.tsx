@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { Plus, DollarSign, Receipt } from "lucide-react";
+import { Plus, DollarSign, Receipt, CheckSquare } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ const expenseClaims = [
 
 export default function Expenses() {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -55,13 +57,22 @@ export default function Expenses() {
           <h1 className="text-2xl font-semibold">Expense Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Track and manage employee expenses</p>
         </div>
-        <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-submit-expense">
-              <Plus className="h-4 w-4 mr-2" />
-              Submit Expense
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/expense-approval")}
+            data-testid="button-approve-claims"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Approve Claims
+          </Button>
+          <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-submit-expense">
+                <Plus className="h-4 w-4 mr-2" />
+                Submit Expense
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Submit Expense Claim</DialogTitle>
@@ -113,7 +124,8 @@ export default function Expenses() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

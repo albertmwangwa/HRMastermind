@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { DollarSign, Download, Play } from "lucide-react";
+import { DollarSign, Download, Play, Settings } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   Table,
   TableBody,
@@ -30,6 +31,8 @@ const payrollRecords = [
 ];
 
 export default function Payroll() {
+  const [, navigate] = useLocation();
+
   const handleRunPayroll = () => {
     console.log("Running payroll...");
   };
@@ -111,15 +114,26 @@ export default function Payroll() {
                     <StatusBadge status={record.status === "processed" ? "approved" : "pending"} />
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDownloadPayslip(record.id)}
-                      data-testid={`button-download-${record.id}`}
-                    >
-                      <Download className="h-3 w-3 mr-2" />
-                      Payslip
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/payroll/salary/${record.id}`)}
+                        data-testid={`button-configure-${record.id}`}
+                      >
+                        <Settings className="h-3 w-3 mr-2" />
+                        Configure
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadPayslip(record.id)}
+                        data-testid={`button-download-${record.id}`}
+                      >
+                        <Download className="h-3 w-3 mr-2" />
+                        Payslip
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

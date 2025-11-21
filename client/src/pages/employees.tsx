@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/status-badge";
 import { Search, Plus, Filter, Mail, Phone } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ const employees = [
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   const filteredEmployees = employees.filter(emp =>
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -160,7 +162,12 @@ export default function Employees() {
                         <span className="text-xs">{employee.phone}</span>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" data-testid={`button-view-${employee.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigate(`/employees/${employee.id}`)}
+                      data-testid={`button-view-${employee.id}`}
+                    >
                       View Details
                     </Button>
                   </div>

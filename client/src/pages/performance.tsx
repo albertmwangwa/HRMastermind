@@ -5,6 +5,24 @@ import { Plus, Target, TrendingUp, Award } from "lucide-react";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -36,6 +54,12 @@ const feedback = [
 
 export default function Performance() {
   const [activeTab, setActiveTab] = useState("goals");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -44,13 +68,159 @@ export default function Performance() {
           <h1 className="text-2xl font-semibold">Performance Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Track goals, conduct appraisals, and manage feedback</p>
         </div>
-        <Button data-testid="button-create-goal">
-          <Plus className="h-4 w-4 mr-2" />
-          {activeTab === "goals" ? "Create Goal" : activeTab === "appraisals" ? "New Appraisal" : "Give Feedback"}
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-goal">
+              <Plus className="h-4 w-4 mr-2" />
+              {activeTab === "goals" ? "Create Goal" : activeTab === "appraisals" ? "New Appraisal" : "Give Feedback"}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {activeTab === "goals" ? "Create Performance Goal" : activeTab === "appraisals" ? "Conduct Performance Appraisal" : "Provide Feedback"}
+              </DialogTitle>
+              <DialogDescription>
+                {activeTab === "goals" ? "Set a new performance goal or KRA" : activeTab === "appraisals" ? "Complete performance review" : "Share feedback with a team member"}
+              </DialogDescription>
+            </DialogHeader>
+            {activeTab === "goals" && (
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="goalEmployee">Employee</Label>
+                  <Select>
+                    <SelectTrigger data-testid="select-goal-employee">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="emp1">John Smith</SelectItem>
+                      <SelectItem value="emp2">Sarah Johnson</SelectItem>
+                      <SelectItem value="emp3">Mike Chen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="goalTitle">Goal Title</Label>
+                  <Input id="goalTitle" placeholder="e.g., Complete React Migration" data-testid="input-goal-title" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="goalDescription">Description</Label>
+                  <Textarea id="goalDescription" placeholder="Describe the goal and success criteria" rows={3} data-testid="textarea-goal-description" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="goalDeadline">Deadline</Label>
+                    <Input id="goalDeadline" type="date" data-testid="input-goal-deadline" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="goalPriority">Priority</Label>
+                    <Select>
+                      <SelectTrigger data-testid="select-goal-priority">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeTab === "appraisals" && (
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="appraisalEmployee">Employee</Label>
+                  <Select>
+                    <SelectTrigger data-testid="select-appraisal-employee">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="emp1">John Smith</SelectItem>
+                      <SelectItem value="emp2">Sarah Johnson</SelectItem>
+                      <SelectItem value="emp3">Mike Chen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="appraisalPeriod">Review Period</Label>
+                  <Select>
+                    <SelectTrigger data-testid="select-appraisal-period">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="q1-2024">Q1 2024</SelectItem>
+                      <SelectItem value="q2-2024">Q2 2024</SelectItem>
+                      <SelectItem value="q3-2024">Q3 2024</SelectItem>
+                      <SelectItem value="q4-2024">Q4 2024</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="appraisalRating">Overall Rating (1-5)</Label>
+                  <Input id="appraisalRating" type="number" min="1" max="5" step="0.1" placeholder="4.5" data-testid="input-appraisal-rating" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="appraisalStrengths">Strengths</Label>
+                  <Textarea id="appraisalStrengths" placeholder="Key strengths and accomplishments" rows={3} data-testid="textarea-appraisal-strengths" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="appraisalAreas">Areas for Improvement</Label>
+                  <Textarea id="appraisalAreas" placeholder="Development areas and action items" rows={3} data-testid="textarea-appraisal-areas" />
+                </div>
+              </div>
+            )}
+            {activeTab === "feedback" && (
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="feedbackTo">To</Label>
+                  <Select>
+                    <SelectTrigger data-testid="select-feedback-to">
+                      <SelectValue placeholder="Select team member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="emp1">John Smith</SelectItem>
+                      <SelectItem value="emp2">Sarah Johnson</SelectItem>
+                      <SelectItem value="emp3">Mike Chen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="feedbackType">Feedback Type</Label>
+                  <Select>
+                    <SelectTrigger data-testid="select-feedback-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="peer">Peer Review</SelectItem>
+                      <SelectItem value="manager">Manager Feedback</SelectItem>
+                      <SelectItem value="recognition">Recognition</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="feedbackComment">Feedback</Label>
+                  <Textarea id="feedbackComment" placeholder="Share your feedback..." rows={4} data-testid="textarea-feedback-comment" />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="button-cancel">
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                console.log(`${activeTab} submitted`);
+                setIsDialogOpen(false);
+              }} data-testid="button-submit">
+                Submit
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList>
           <TabsTrigger value="goals" data-testid="tab-goals">
             <Target className="h-4 w-4 mr-2" />

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { Plus, Briefcase, Users } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -40,6 +41,7 @@ const candidates = [
 
 export default function Recruitment() {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -160,10 +162,22 @@ export default function Recruitment() {
                     </div>
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1" data-testid={`button-view-${job.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1" 
+                      onClick={() => navigate(`/recruitment/job/${job.id}`)}
+                      data-testid={`button-view-${job.id}`}
+                    >
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1" data-testid={`button-edit-${job.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1" 
+                      onClick={() => navigate(`/recruitment/job/${job.id}`)}
+                      data-testid={`button-edit-${job.id}`}
+                    >
                       Edit
                     </Button>
                   </div>

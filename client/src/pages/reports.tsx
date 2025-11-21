@@ -29,6 +29,32 @@ export default function Reports() {
     console.log(`Generating ${selectedReport} for period ${reportPeriod}`);
   };
 
+  const handleExportCSV = () => {
+    console.log(`Exporting ${selectedReport} to CSV for period ${reportPeriod}`);
+    const csvData = generateMockCSVData(selectedReport);
+    const csvContent = "data:text/csv;charset=utf-8," + csvData;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${selectedReport.replace(/ /g, "_")}_${reportPeriod}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const generateMockCSVData = (reportType: string) => {
+    if (reportType.includes("Attendance")) {
+      return "Employee,Date,Check In,Check Out,Hours Worked\nJohn Smith,2024-03-25,09:00,17:30,8.5\nSarah Johnson,2024-03-25,08:45,17:15,8.5\n";
+    } else if (reportType.includes("Leave")) {
+      return "Employee,Leave Type,From,To,Days,Status\nJohn Smith,Annual Leave,2024-04-01,2024-04-05,5,Approved\nMike Chen,Sick Leave,2024-03-28,2024-03-29,2,Approved\n";
+    } else if (reportType.includes("Expense")) {
+      return "Employee,Category,Amount,Date,Status\nJohn Smith,Travel,$450,2024-03-25,Approved\nSarah Johnson,Meals,$120,2024-03-24,Approved\n";
+    } else if (reportType.includes("Payroll")) {
+      return "Employee,Basic Salary,Allowances,Deductions,Net Pay\nJohn Smith,$5000,$1500,$1200,$5300\nSarah Johnson,$6500,$2000,$1700,$6800\n";
+    }
+    return "Report,Data,Will,Be,Here\nSample,Row,1,2,3\n";
+  };
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div>
@@ -85,6 +111,7 @@ export default function Reports() {
             </Button>
             <Button
               variant="outline"
+              onClick={handleExportCSV}
               disabled={!selectedReport || !reportPeriod}
               data-testid="button-export-csv"
             >

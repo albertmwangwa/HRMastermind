@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Server, RefreshCw, Settings, Clock } from "lucide-react";
+import { Server, RefreshCw, Settings, Clock, Plus } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ const attendanceRecords = [
 export default function Attendance() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [syncing, setSyncing] = useState(false);
+  const [, navigate] = useLocation();
 
   const handleSyncAll = () => {
     setSyncing(true);
@@ -50,10 +52,20 @@ export default function Attendance() {
           <h1 className="text-2xl font-semibold">Attendance Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Track employee attendance and manage biometric devices</p>
         </div>
-        <Button onClick={handleSyncAll} disabled={syncing} data-testid="button-sync-all">
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? "Syncing..." : "Sync All Devices"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/attendance-entry")} 
+            data-testid="button-manual-entry"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Manual Entry
+          </Button>
+          <Button onClick={handleSyncAll} disabled={syncing} data-testid="button-sync-all">
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? "Syncing..." : "Sync All Devices"}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="devices" className="space-y-6">
@@ -108,7 +120,13 @@ export default function Attendance() {
                       <RefreshCw className="h-3 w-3 mr-2" />
                       Sync
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1" data-testid={`button-configure-${device.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1" 
+                      onClick={() => navigate(`/attendance/device/${device.id}`)}
+                      data-testid={`button-configure-${device.id}`}
+                    >
                       <Settings className="h-3 w-3 mr-2" />
                       Configure
                     </Button>
@@ -117,7 +135,11 @@ export default function Attendance() {
               </Card>
             ))}
           </div>
-          <Button variant="outline" data-testid="button-add-device">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/attendance/device/new")}
+            data-testid="button-add-device"
+          >
             <Server className="h-4 w-4 mr-2" />
             Add New Device
           </Button>

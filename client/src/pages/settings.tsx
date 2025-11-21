@@ -3,15 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Users, Shield } from "lucide-react";
+import { Settings as SettingsIcon, Building, Users, Shield, Briefcase } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useLocation } from "wouter";
 
 export default function Settings() {
+  const [, navigate] = useLocation();
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage system configuration and preferences</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage system configuration and preferences</p>
+        </div>
+        <Button 
+          variant="outline"
+          onClick={() => navigate("/settings/departments")}
+          data-testid="button-manage-departments"
+        >
+          <Briefcase className="h-4 w-4 mr-2" />
+          Manage Departments
+        </Button>
       </div>
 
       <Tabs defaultValue="company" className="space-y-6">

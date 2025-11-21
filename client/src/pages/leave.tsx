@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Plus, Settings, CheckSquare } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ const leaveRequests = [
 
 export default function Leave() {
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   const handleApprove = (id: number) => {
     console.log(`Approved leave request ${id}`);
@@ -63,13 +65,30 @@ export default function Leave() {
           <h1 className="text-2xl font-semibold">Leave Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage leave requests and track balances</p>
         </div>
-        <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-apply-leave">
-              <Plus className="h-4 w-4 mr-2" />
-              Apply for Leave
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/leave-configuration")}
+            data-testid="button-configure-leave-types"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configure Types
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/leave-approval")}
+            data-testid="button-approve-leave"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Approve Requests
+          </Button>
+          <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-apply-leave">
+                <Plus className="h-4 w-4 mr-2" />
+                Apply for Leave
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Apply for Leave</DialogTitle>
@@ -116,7 +135,8 @@ export default function Leave() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
