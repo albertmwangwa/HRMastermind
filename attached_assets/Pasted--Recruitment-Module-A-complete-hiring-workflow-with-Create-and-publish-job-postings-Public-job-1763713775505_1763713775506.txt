@@ -1,0 +1,249 @@
+📌 Recruitment Module
+
+A complete hiring workflow with:
+
+Create and publish job postings
+
+Public job listing page + application form
+
+Manage applicant profiles with contact data & CV uploads
+
+Pipeline tracking (Applied → Shortlisted → Interview → Offer → Hired/Rejected)
+
+Candidate evaluation forms (rating and comments)
+
+Activity logs for recruiter actions
+
+Automatic conversion of hired candidates into employee onboarding
+
+👥 Employee Lifecycle Management
+
+Full employee profile system including:
+
+Personal info, employment records, contract terms
+
+Department, role, reporting manager, branch assignment
+
+Biometric ID mapping for ZKTeco MB100 devices
+
+Onboarding checklists (documents, tasks, verification steps)
+
+Employment history: promotions, transfers, salary revisions
+
+Exit workflow: resignation, approvals, clearance, offboarding tasks
+
+Employee directory with advanced search + filters
+
+Profile fields:
+
+Basic details, contact info, emergency contacts
+
+Job details, salary structure, bank info
+
+Documents archive: contracts, ID copies, offer letters
+
+Custom fields support
+
+📡 ZKTeco Device Management
+
+A dedicated module to handle biometric attendance devices (MB100):
+
+Device setup:
+
+Register multiple MB100 devices
+
+Assign device to branch or department
+
+Store IP address, port, device name, and connection mode
+
+Device operations:
+
+Real-time connection testing (online/offline)
+
+Sync employee biometric IDs from HRMS → Devices
+
+Fetch attendance logs from Devices → HRMS
+
+Error monitoring + retry queues
+
+Device monitoring dashboard:
+
+Live device status: online/offline
+
+Last sync time
+
+Device uptime/heartbeat
+
+Number of biometric templates stored
+
+⏱️ Attendance System (with ZKTeco Integration)
+
+Core attendance tracking with:
+
+Automatic syncing of punch in/out logs from ZKTeco devices (TCP/IP or ZKTeco server API)
+
+Attendance calendar per employee
+
+Manual attendance adjustment (admin/manager only)
+
+Roster/schedule configurations for shifts
+
+Branch-wise and department-wise attendance reports
+
+Late/early/absent calculations
+
+Overtime recording (manual or automated rules)
+
+Attendance data points:
+
+Punch IN time
+
+Punch OUT time
+
+Location/branch/device source
+
+Work hours calculation
+
+📆 Leave Management System
+
+Full leave automation:
+
+Request submission with leave type, dates, notes
+
+Manager approval workflow
+
+Leave balance tracking
+
+Leave accrual rules (monthly/yearly)
+
+Custom leave types: annual, sick, maternity, paternity, casual, study leave
+
+Holiday calendar with national/regional holidays
+
+Integration with attendance to block overlapping punch records
+
+Leave reports (team, individual, organization-wide)
+
+💸 Expense & Advance Management
+
+Employees can submit:
+
+Expense claims (travel, meals, fuel, accommodation, etc.)
+
+Attach receipts
+
+Category-based approval workflow
+
+Expense overview + history
+
+Advance requests with repayment tracking
+
+Managers/Admins can:
+
+Approve/reject claims
+
+View expense reports with filters
+
+📊 Performance Management
+
+Create a structured performance review system:
+
+Goal and KRA setup per employee
+
+Goal progress tracking
+
+Appraisal forms with rating scales
+
+Manager reviews, peer feedback, self-assessment
+
+Performance history for each employee
+
+Review cycles (quarterly, annual, custom periods)
+
+💰 Payroll Processing
+
+A simple but functional payroll module:
+
+Salary configuration:
+
+Define employee salary components:
+
+Basic salary
+
+Allowances (transport, housing, meals)
+
+Deductions (loans, taxes, penalties)
+
+Loan management with repayment schedules
+
+Payroll run:
+
+Auto calculate salary based on attendance
+
+Deduct unpaid leave
+
+Include overtime payments
+
+Compute statutory deductions (regional tax rules)
+
+Generate downloadable payslips (PDF)
+
+Payroll history per employee and per month
+
+Export:
+
+CSV export of payroll reports
+
+📈 Dashboard & Analytics
+
+General dashboard for each role:
+
+Admin dashboard:
+
+Total employees
+
+Pending approvals (leave, expenses, onboarding steps)
+
+Attendance summary (present/absent/late)
+
+Leave statistics
+
+Device connection status across branches
+
+Upcoming employee events (birthdays, contract expiries)
+
+Manager dashboard:
+
+Team attendance
+
+Team leave calendar
+
+Team performance goals summary
+
+Team expenses pending approval
+
+Employee dashboard:
+
+This month’s attendance stats
+
+Leave balances
+
+Pending tasks (onboarding/performance)
+
+📚 Reporting Module
+
+Generate downloadable comprehensive reports:
+
+Attendance reports with filters
+
+Leave utilization reports
+
+Monthly/yearly payroll summaries
+
+Expense reports
+
+Device connectivity logs
+
+Employee directory export
+
+All exports in CSV (PDF optional)
