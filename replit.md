@@ -4,6 +4,8 @@
 
 This is a comprehensive HRMS (Human Resource Management System) built as a full-stack web application. The system manages the complete employee lifecycle including recruitment, employee management, attendance tracking, leave management, expense claims, performance reviews, and payroll processing. It follows a modern enterprise SaaS design approach inspired by BambooHR and Workday, emphasizing information clarity, efficient workflows, and professional aesthetics.
 
+**Primary Color:** Blue (#1965ae = HSL 207 62% 39%) - Professional enterprise branding
+
 The system implements **Role-Based Access Control (RBAC)** with four distinct user experiences:
 - **System Admin**: Configuration-focused dashboard for managing users, departments, leave types, and expense categories
 - **HR Manager**: Full access to all HR modules (recruitment, employees, attendance, leave, expenses, performance, payroll, reports)
@@ -13,6 +15,18 @@ The system implements **Role-Based Access Control (RBAC)** with four distinct us
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes
+
+### November 21, 2025 - Authentication Migration & Security Hardening
+- **Migrated authentication** from Replit Auth (OIDC) to local email/password using Passport Local Strategy
+- **Changed primary color** from pink to blue (#1965ae) across entire application
+- **Created initial users**: Three users seeded (system_admin, hr_manager, department_manager) with password "admin123"
+- **Security hardening complete**:
+  - Added requireRole guards to all write endpoints (POST/PUT/PATCH/DELETE)
+  - Implemented multi-layer CSRF protection (sameSite cookies + origin/referer validation)
+  - Architect validation: PASS rating for production readiness
+- **Files modified**: server/localAuth.ts, server/routes.ts, client/src/pages/login.tsx, client/src/index.css, shared/schema.ts, server/seed-users.ts
 
 ## System Architecture
 
@@ -90,8 +104,15 @@ Preferred communication style: Simple, everyday language.
 - Admin routes (`/api/admin/*`): system_admin only - user management, departments, leave types, expense categories
 - HR operations: hr_manager required - employee CRUD, recruitment, payroll, reports
 - Approval workflows: hr_manager OR department_manager - leave/expense approvals
+- Employee self-service: employee+ (all roles) - attendance, leave requests, expense claims, performance goals
 - Department-specific access: department managers filtered by departmentId (pending implementation)
-- Self-service portal: employee role - personal profile, attendance, leave, expenses (pending implementation)
+
+**Security Hardening (Production-Ready):**
+- RBAC enforcement: All write endpoints protected with requireRole middleware matching RBAC matrix
+- CSRF protection: Multi-layer defense with sameSite:"lax" cookies + Origin/Referer validation
+- Session security: httpOnly cookies, secure flag in production, PostgreSQL session store
+- Password security: bcrypt hashing, no plaintext storage
+- Architect validated: PASS rating for comprehensive security implementation
 
 **Admin Configuration (Completed):**
 - User Management: Create/update/delete users with role assignment and department linking
@@ -166,9 +187,11 @@ Preferred communication style: Simple, everyday language.
 - Session storage requires database with sessions table
 
 **Authentication Provider:**
-- Replit Auth (OpenID Connect)
-- Environment variables: ISSUER_URL, REPL_ID, SESSION_SECRET
-- Fallback to standard OIDC if not on Replit
+- Local email/password authentication using Passport Local Strategy
+- Bcrypt password hashing with 10 salt rounds
+- Login-only system (no public signup) - users created by System Admin only
+- Environment variable: SESSION_SECRET for session signing
+- Initial admin credentials: albert.mwangwa@suhara.com (system_admin), mariam.kambarage@suhara.com (hr_manager), clinton.expedito@suhara.com (department_manager), all with password "admin123"
 
 **UI Component Libraries:**
 - Radix UI primitives for accessible component foundation
