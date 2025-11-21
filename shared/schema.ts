@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const roleEnum = pgEnum("role", ["admin", "manager", "employee"]);
+export const roleEnum = pgEnum("role", ["system_admin", "hr_manager", "department_manager", "employee"]);
 export const employmentStatusEnum = pgEnum("employment_status", ["active", "inactive", "terminated"]);
 export const deviceStatusEnum = pgEnum("device_status", ["online", "offline"]);
 export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
@@ -31,6 +31,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: roleEnum("role").notNull().default("employee"),
+  departmentId: varchar("department_id").references(() => departments.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
