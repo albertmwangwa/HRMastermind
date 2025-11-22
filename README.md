@@ -103,12 +103,47 @@ HRMS is a full-stack Human Resource Management System designed to streamline the
 
 ## Quick Start
 
-### Prerequisites
+### Choose Your Setup Method
+
+#### Option 1: Docker (Recommended for Easy Management) 🐳
+
+**Prerequisites:**
+- Docker Engine 20.10+ and Docker Compose 2.0+
+
+**Quick Start:**
+```bash
+# Clone repository
+git clone <repository-url>
+cd hrms-project
+
+# Start everything (app + database)
+docker compose up
+
+# Access application at http://localhost:5000
+```
+
+**Production Deployment:**
+```bash
+# Create .env file with production credentials
+cp .env.example .env
+# Edit .env with your actual values
+
+# Start production stack
+docker compose -f docker-compose.prod.yml up -d
+```
+
+📖 **[Complete Docker Guide](docs/DOCKER_GUIDE.md)** - Full Docker documentation with troubleshooting, backup/restore, and advanced configuration.
+
+---
+
+#### Option 2: Traditional Installation
+
+**Prerequisites:**
 - Node.js 18+ and npm
 - PostgreSQL database (Neon recommended)
 - Resend API key (for emails)
 
-### Installation
+**Installation Steps:**
 
 1. **Clone the repository**
    ```bash
@@ -177,6 +212,12 @@ Comprehensive documentation is available in the `/docs` folder:
 - Module guides
 - Common tasks
 - FAQs
+
+🐳 **[Docker Guide](docs/DOCKER_GUIDE.md)**
+- Docker setup (development & production)
+- Container management
+- Backup & restore
+- Troubleshooting
 
 ---
 
@@ -325,7 +366,21 @@ The system provides real-time connection testing:
 
 ## Deployment
 
-### Replit (Recommended)
+### Docker Deployment (Recommended)
+
+**Easiest and most reliable deployment method:**
+
+1. Clone repository on your server
+2. Create `.env` file with production credentials
+3. Run:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+4. Configure reverse proxy (nginx) for HTTPS
+
+See **[Docker Guide](docs/DOCKER_GUIDE.md)** for complete instructions.
+
+### Replit
 
 1. Fork/import project to Replit
 2. Configure secrets:

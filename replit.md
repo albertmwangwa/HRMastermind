@@ -20,6 +20,25 @@ Comprehensive technical documentation is available in the `/docs` folder and pro
 
 ## Recent Changes
 
+### November 22, 2025 - Docker Containerization
+- **Docker Configuration**
+  - Created multi-stage production Dockerfile with ~70% size reduction
+  - Created development Dockerfile with hot reload support
+  - Added docker-compose.yml for local development with PostgreSQL
+  - Added docker-compose.prod.yml for production deployment
+  - Created .dockerignore for optimized builds
+  - Added .env.example template for environment variables
+  - Comprehensive Docker Guide with 50+ commands and troubleshooting
+- **Benefits**
+  - One-command setup: `docker compose up`
+  - Consistent environment across dev/staging/prod
+  - Includes PostgreSQL database automatically
+  - Hot reload in development mode
+  - Optimized multi-stage builds for production
+  - Easy backup/restore and scaling
+- **Files created**: Dockerfile, Dockerfile.dev, docker-compose.yml, docker-compose.prod.yml, .dockerignore, .env.example, docs/DOCKER_GUIDE.md
+- **Files modified**: README.md, replit.md
+
 ### November 22, 2025 - Navigation Highlighting & Complete Documentation
 - **Navigation Improvements**
   - Fixed sidebar navigation highlighting using longest-match-first algorithm
