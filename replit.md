@@ -8,7 +8,32 @@ This HRMS (Human Resource Management System) is a full-stack web application man
 
 Preferred communication style: Simple, everyday language.
 
+## Documentation
+
+Comprehensive technical documentation is available in the `/docs` folder and project root:
+
+- **README.md**: Project overview, features, quick start, tech stack
+- **docs/TECHNICAL_DOCUMENTATION.md**: Complete technical reference including architecture, database schema, API reference, authentication, and module documentation
+- **docs/SITE_MAP.md**: Visual site map with route structure and access control matrix
+- **docs/USER_GUIDE.md**: Role-specific walkthroughs, module guides, common tasks, and FAQs
+- **docs/QUICK_START.md**: Developer and System Administrator quick start guides
+
 ## Recent Changes
+
+### November 22, 2025 - Navigation Highlighting & Complete Documentation
+- **Navigation Improvements**
+  - Fixed sidebar navigation highlighting using longest-match-first algorithm
+  - Updated sidebar accent colors to use primary blue (#1965ae) for active states
+  - Active navigation items now correctly highlight based on current route
+  - Works for exact matches and sub-routes (e.g., /admin/devices highlights "Device Configuration")
+- **Comprehensive Documentation Created**
+  - Generated complete technical documentation covering architecture, database schema, API reference
+  - Created visual site map with route structure and RBAC access matrix
+  - Developed user guide with role-specific walkthroughs and FAQs
+  - Added quick start guides for developers and system administrators
+  - Updated README.md with project overview and setup instructions
+- **Files modified**: client/src/index.css, client/src/components/app-sidebar.tsx
+- **Files created**: README.md, docs/TECHNICAL_DOCUMENTATION.md, docs/SITE_MAP.md, docs/USER_GUIDE.md, docs/QUICK_START.md
 
 ### November 21, 2025 - Enhanced Device Management & Attendance Filtering
 - **Device Management Enhancements**
