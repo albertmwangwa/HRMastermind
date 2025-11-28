@@ -11,93 +11,99 @@ export interface IStorage {
   upsertUser(user: schema.UpsertUser): Promise<schema.User>;
   updateUser(id: string, user: Partial<schema.InsertUser>): Promise<schema.User | undefined>;
   deleteUser(id: string): Promise<void>;
-  
+  getUserCount(): Promise<number>;
+
   // Departments
   getAllDepartments(): Promise<schema.Department[]>;
   getDepartment(id: string): Promise<schema.Department | undefined>;
   createDepartment(dept: schema.InsertDepartment): Promise<schema.Department>;
   updateDepartment(id: string, dept: Partial<schema.InsertDepartment>): Promise<schema.Department | undefined>;
   deleteDepartment(id: string): Promise<void>;
-  
+
   // Employees
   getAllEmployees(): Promise<schema.Employee[]>;
   getEmployee(id: string): Promise<schema.Employee | undefined>;
   createEmployee(employee: schema.InsertEmployee): Promise<schema.Employee>;
   updateEmployee(id: string, employee: Partial<schema.InsertEmployee>): Promise<schema.Employee | undefined>;
-  
+
   // Attendance Devices
   getAllDevices(): Promise<schema.AttendanceDevice[]>;
   getDevice(id: string): Promise<schema.AttendanceDevice | undefined>;
   createDevice(device: schema.InsertAttendanceDevice): Promise<schema.AttendanceDevice>;
-  updateDeviceStatus(id: string, status: "online" | "offline"): Promise<void>;
+  updateDevice(id: string, device: Partial<schema.InsertAttendanceDevice>): Promise<schema.AttendanceDevice | undefined>;
+  deleteDevice(id: string): Promise<void>;
+  updateDeviceStatus(id: string, status: "online" | "offline" | "syncing" | "idle" | "error"): Promise<void>;
   updateDeviceLastSync(id: string): Promise<void>;
-  
+  updateDeviceSyncStats(id: string, stats: { recordCount: number; duration: number; success: boolean }): Promise<void>;
+  createDeviceLog(log: schema.InsertDeviceActivityLog): Promise<schema.DeviceActivityLog>;
+  getDeviceLogs(deviceId: string, limit?: number): Promise<schema.DeviceActivityLog[]>;
+
   // Attendance Logs
   getAttendanceLogsByDate(date: Date): Promise<schema.AttendanceLog[]>;
   getAttendanceLogsByEmployee(employeeId: string): Promise<schema.AttendanceLog[]>;
   createAttendanceLog(log: schema.InsertAttendanceLog): Promise<schema.AttendanceLog>;
-  
+
   // Leave Types
   getAllLeaveTypes(): Promise<schema.LeaveType[]>;
   getLeaveType(id: string): Promise<schema.LeaveType | undefined>;
   createLeaveType(type: schema.InsertLeaveType): Promise<schema.LeaveType>;
   updateLeaveType(id: string, type: Partial<schema.InsertLeaveType>): Promise<schema.LeaveType | undefined>;
   deleteLeaveType(id: string): Promise<void>;
-  
+
   // Leave Requests
   getAllLeaveRequests(): Promise<schema.LeaveRequest[]>;
   getLeaveRequest(id: string): Promise<schema.LeaveRequest | undefined>;
   createLeaveRequest(request: schema.InsertLeaveRequest): Promise<schema.LeaveRequest>;
   updateLeaveRequestStatus(id: string, status: "approved" | "rejected", reviewerId: string): Promise<void>;
-  
+
   // Expense Categories
   getAllExpenseCategories(): Promise<schema.ExpenseCategory[]>;
   getExpenseCategory(id: string): Promise<schema.ExpenseCategory | undefined>;
   createExpenseCategory(category: schema.InsertExpenseCategory): Promise<schema.ExpenseCategory>;
   updateExpenseCategory(id: string, category: Partial<schema.InsertExpenseCategory>): Promise<schema.ExpenseCategory | undefined>;
   deleteExpenseCategory(id: string): Promise<void>;
-  
+
   // Expense Claims
   getAllExpenseClaims(): Promise<schema.ExpenseClaim[]>;
   getExpenseClaim(id: string): Promise<schema.ExpenseClaim | undefined>;
   createExpenseClaim(claim: schema.InsertExpenseClaim): Promise<schema.ExpenseClaim>;
   updateExpenseClaimStatus(id: string, status: "approved" | "rejected", reviewerId: string): Promise<void>;
-  
+
   // Performance Goals
   getAllGoals(): Promise<schema.PerformanceGoal[]>;
   getGoal(id: string): Promise<schema.PerformanceGoal | undefined>;
   createGoal(goal: schema.InsertPerformanceGoal): Promise<schema.PerformanceGoal>;
   updateGoalProgress(id: string, progress: number): Promise<void>;
-  
+
   // Appraisals
   getAllAppraisals(): Promise<schema.Appraisal[]>;
   getAppraisal(id: string): Promise<schema.Appraisal | undefined>;
   createAppraisal(appraisal: schema.InsertAppraisal): Promise<schema.Appraisal>;
-  
+
   // Feedback
   getAllFeedback(): Promise<schema.Feedback[]>;
   createFeedback(feedback: schema.InsertFeedback): Promise<schema.Feedback>;
-  
+
   // Salary Configs
   getSalaryConfig(employeeId: string): Promise<schema.SalaryConfig | undefined>;
   createOrUpdateSalaryConfig(config: schema.InsertSalaryConfig): Promise<schema.SalaryConfig>;
-  
+
   // Payroll
   getAllPayrollRecords(): Promise<schema.PayrollRecord[]>;
   getPayrollRecordsByPeriod(period: string): Promise<schema.PayrollRecord[]>;
   createPayrollRecord(record: schema.InsertPayrollRecord): Promise<schema.PayrollRecord>;
-  
+
   // Job Postings
   getAllJobPostings(): Promise<schema.JobPosting[]>;
   getJobPosting(id: string): Promise<schema.JobPosting | undefined>;
   createJobPosting(job: schema.InsertJobPosting): Promise<schema.JobPosting>;
-  
+
   // Candidates
   getAllCandidates(): Promise<schema.Candidate[]>;
   getCandidate(id: string): Promise<schema.Candidate | undefined>;
   createCandidate(candidate: schema.InsertCandidate): Promise<schema.Candidate>;
   updateCandidateStage(id: string, stage: string): Promise<void>;
-  
+
   // Employee Requests
   getAllEmployeeRequests(): Promise<schema.EmployeeRequest[]>;
   getEmployeeRequestsByUser(userId: string): Promise<schema.EmployeeRequest[]>;
@@ -115,7 +121,12 @@ export class DbStorage implements IStorage {
   }
 
   async getUserByEmail(email: string) {
-    const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email));
+    // Perform a case-insensitive lookup to avoid mismatches due to mixed-case emails
+    const normalized = (email || "").trim().toLowerCase();
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(sql`lower(${schema.users.email}) = ${normalized}`);
     return user;
   }
 
@@ -154,6 +165,11 @@ export class DbStorage implements IStorage {
 
   async deleteUser(id: string) {
     await db.delete(schema.users).where(eq(schema.users.id, id));
+  }
+
+  async getUserCount() {
+    const [result] = await db.select({ count: sql<number>`count(*)` }).from(schema.users);
+    return Number(result.count);
   }
 
   // Departments
@@ -219,12 +235,49 @@ export class DbStorage implements IStorage {
     return newDevice;
   }
 
-  async updateDeviceStatus(id: string, status: "online" | "offline") {
+  async updateDevice(id: string, device: Partial<schema.InsertAttendanceDevice>) {
+    const [updated] = await db
+      .update(schema.attendanceDevices)
+      .set(device)
+      .where(eq(schema.attendanceDevices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDevice(id: string) {
+    await db.delete(schema.attendanceDevices).where(eq(schema.attendanceDevices.id, id));
+  }
+
+  async updateDeviceStatus(id: string, status: "online" | "offline" | "syncing" | "idle" | "error") {
     await db.update(schema.attendanceDevices).set({ status }).where(eq(schema.attendanceDevices.id, id));
   }
 
   async updateDeviceLastSync(id: string) {
     await db.update(schema.attendanceDevices).set({ lastSyncAt: new Date() }).where(eq(schema.attendanceDevices.id, id));
+  }
+
+  async updateDeviceSyncStats(id: string, stats: { recordCount: number; duration: number; success: boolean }) {
+    await db.update(schema.attendanceDevices)
+      .set({
+        lastSyncRecordCount: stats.recordCount,
+        lastSyncDuration: stats.duration,
+        lastSyncSuccess: stats.success,
+        lastSyncAt: new Date()
+      })
+      .where(eq(schema.attendanceDevices.id, id));
+  }
+
+  async createDeviceLog(log: schema.InsertDeviceActivityLog) {
+    const [newLog] = await db.insert(schema.deviceActivityLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getDeviceLogs(deviceId: string, limit: number = 50) {
+    return await db.select()
+      .from(schema.deviceActivityLogs)
+      .where(eq(schema.deviceActivityLogs.deviceId, deviceId))
+      .orderBy(desc(schema.deviceActivityLogs.createdAt))
+      .limit(limit);
   }
 
   // Attendance Logs
@@ -475,8 +528,8 @@ export class DbStorage implements IStorage {
 
   async updateEmployeeRequestStatus(id: string, status: "approved" | "rejected", approverId: string, notes?: string) {
     const [updated] = await db.update(schema.employeeRequests)
-      .set({ 
-        status, 
+      .set({
+        status,
         approvedById: approverId,
         approvalNotes: notes,
         updatedAt: sql`now()`
@@ -496,18 +549,18 @@ export class DbStorage implements IStorage {
         .from(schema.employeeRequests)
         .where(eq(schema.employeeRequests.id, requestId))
         .limit(1);
-      
+
       if (!request) {
         throw new Error("Request not found");
       }
-      
+
       if (request.status !== "pending") {
         throw new Error(`Request already ${request.status}`);
       }
-      
+
       // Extract employee data from request
       const employeeData = request.requestData as any;
-      
+
       // Create employee within transaction (unique constraint will be enforced)
       const [newEmployee] = await tx
         .insert(schema.employees)
@@ -524,7 +577,7 @@ export class DbStorage implements IStorage {
           userId: undefined,
         })
         .returning();
-      
+
       // Update request status within same transaction
       const [updatedRequest] = await tx
         .update(schema.employeeRequests)
@@ -536,11 +589,11 @@ export class DbStorage implements IStorage {
         })
         .where(eq(schema.employeeRequests.id, requestId))
         .returning();
-      
+
       if (!updatedRequest) {
         throw new Error("Failed to update request status");
       }
-      
+
       return {
         request: updatedRequest,
         employee: newEmployee,

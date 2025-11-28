@@ -4,6 +4,8 @@ import { type Server } from "node:http";
 
 import express, { type Express } from "express";
 import runApp from "./app";
+import { storage } from "./storage";
+import { seedUsers } from "./seed-users";
 
 export async function serveStatic(app: Express, _server: Server) {
   const distPath = path.resolve(import.meta.dirname, "public");
@@ -23,5 +25,15 @@ export async function serveStatic(app: Express, _server: Server) {
 }
 
 (async () => {
+  // Auto-seed if no users exist
+  try {
+    const userCount = await storage.getUserCount();
+    if (userCount === 0) {
+      await seedUsers();
+    }
+  } catch (error) {
+    console.error("Failed to auto-seed:", error);
+  }
+
   await runApp(serveStatic);
 })();

@@ -8,6 +8,8 @@ import { createServer as createViteServer, createLogger } from "vite";
 
 import viteConfig from "../vite.config";
 import runApp from "./app";
+import { storage } from "./storage";
+import { seedUsers } from "./seed-users";
 
 export async function setupVite(app: Express, server: Server) {
   const viteLogger = createLogger();
@@ -27,7 +29,10 @@ export async function setupVite(app: Express, server: Server) {
         process.exit(1);
       },
     },
-    server: serverOptions,
+    server: {
+      ...viteConfig.server,
+      ...serverOptions,
+    },
     appType: "custom",
   });
 
@@ -59,5 +64,15 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 (async () => {
+  // Auto-seed if no users exist
+  try {
+    const userCount = await storage.getUserCount();
+    if (userCount === 0) {
+      await seedUsers();
+    }
+  } catch (error) {
+    console.error("Failed to auto-seed:", error);
+  }
+
   await runApp(setupVite);
 })();

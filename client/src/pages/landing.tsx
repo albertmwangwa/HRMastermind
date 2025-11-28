@@ -46,7 +46,7 @@ export default function Landing() {
                 data-testid="button-login-cta"
                 className="px-8 py-6"
               >
-                Sign In Now
+                Sign In
               </Button>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 const SALT_ROUNDS = 10;
 
-async function seedUsers() {
+export async function seedUsers() {
   console.log("Starting user seed...");
 
   // Hash the password
@@ -63,11 +63,12 @@ async function seedUsers() {
   console.log("- mariam.kambarage@suhara.com (HR Manager)");
   console.log("- clinton.expedito@suhara.com (Department Manager)");
   console.log("Password for all users: admin123");
-
-  process.exit(0);
 }
 
-seedUsers().catch((error) => {
-  console.error("Seed failed:", error);
-  process.exit(1);
-});
+// Run directly if executed as a script
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedUsers().catch((error) => {
+    console.error("Seed failed:", error);
+    process.exit(1);
+  });
+}

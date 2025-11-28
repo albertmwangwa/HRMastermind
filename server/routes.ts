@@ -6,6 +6,7 @@ import { z } from "zod";
 import { setupAuth, requireRole } from "./localAuth";
 import bcrypt from "bcrypt";
 import { sendCredentialEmail } from "./email";
+import { BioTimeService } from "./services/zkteco";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -13,9 +14,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Protect all API routes except authentication endpoints
   app.use("/api/*", (req, res, next) => {
-    if (req.originalUrl.startsWith("/api/login") || 
-        req.originalUrl.startsWith("/api/logout") ||
-        req.originalUrl === "/api/auth/user") {
+    if (req.originalUrl.startsWith("/api/login") ||
+      req.originalUrl.startsWith("/api/logout") ||
+      req.originalUrl === "/api/auth/user") {
       return next();
     }
     if (!req.isAuthenticated()) {
@@ -83,14 +84,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as schema.User;
       let requests;
-      
+
       if (user.role === "hr_manager") {
         requests = await storage.getAllEmployeeRequests();
       } else {
         // Department managers only see their own requests
         requests = await storage.getEmployeeRequestsByUser(user.id);
       }
-      
+
       res.json(requests);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch employee requests" });
@@ -104,13 +105,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!request) {
         return res.status(404).json({ error: "Employee request not found" });
       }
-      
+
       const user = req.user as schema.User;
       // Department managers can only view their own requests
       if (user.role === "department_manager" && request.requestedById !== user.id) {
         return res.status(403).json({ error: "Access denied" });
       }
-      
+
       res.json(request);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch employee request" });
@@ -121,15 +122,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/employee-requests", requireRole("department_manager"), async (req, res) => {
     try {
       const user = req.user as schema.User;
-      
+
       // Validate request body
       const requestSchema = z.object({
         requestType: z.enum(["new_employee", "transfer"]),
         requestData: z.object({}).passthrough(), // Allow any structure for flexible data
       });
-      
+
       const validated = requestSchema.parse(req.body);
-      
+
       // Create the request with the current user as requestedBy
       const requestData: schema.InsertEmployeeRequest = {
         requestType: validated.requestType,
@@ -137,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestData: validated.requestData,
         status: "pending",
       };
-      
+
       const newRequest = await storage.createEmployeeRequest(requestData);
       res.status(201).json(newRequest);
     } catch (error) {
@@ -153,15 +154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/employee-requests/:id/status", requireRole("hr_manager"), async (req, res) => {
     try {
       const user = req.user as schema.User;
-      
+
       // Validate request body
       const statusSchema = z.object({
         status: z.enum(["approved", "rejected"]),
         notes: z.string().optional(),
       });
-      
+
       const { status, notes } = statusSchema.parse(req.body);
-      
+
       // If approving, use atomic approval method
       if (status === "approved") {
         try {
@@ -170,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!currentRequest) {
             return res.status(404).json({ error: "Employee request not found" });
           }
-          
+
           // Validate that request_data contains required employee fields
           const employeeDataSchema = z.object({
             firstName: z.string().min(1, "First name is required"),
@@ -183,24 +184,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             biometricId: z.string().optional(),
             status: z.enum(["active", "inactive", "terminated"]).optional(),
           });
-          
+
           const employeeData = employeeDataSchema.parse(currentRequest.requestData);
-          
+
           // Verify department exists
           const department = await storage.getDepartment(employeeData.departmentId);
           if (!department) {
-            return res.status(400).json({ 
-              error: "Invalid department ID in request data" 
+            return res.status(400).json({
+              error: "Invalid department ID in request data"
             });
           }
-          
+
           // Use atomic approval method (handles idempotency and creates employee)
           const result = await storage.approveEmployeeRequest(
             req.params.id,
             user.id,
             notes
           );
-          
+
           res.json({
             request: result.request,
             employee: result.employee,
@@ -209,16 +210,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error: any) {
           // Handle unique constraint violation (duplicate email)
           if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
-            return res.status(409).json({ 
-              error: "Employee with this email already exists" 
+            return res.status(409).json({
+              error: "Employee with this email already exists"
             });
           }
-          
+
           // Handle already processed requests
           if (error.message?.includes("already")) {
             return res.status(400).json({ error: error.message });
           }
-          
+
           throw error;
         }
       } else {
@@ -227,24 +228,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!currentRequest) {
           return res.status(404).json({ error: "Employee request not found" });
         }
-        
+
         if (currentRequest.status !== "pending") {
-          return res.status(400).json({ 
-            error: `Request already ${currentRequest.status}. Cannot update status.` 
+          return res.status(400).json({
+            error: `Request already ${currentRequest.status}. Cannot update status.`
           });
         }
-        
+
         const updated = await storage.updateEmployeeRequestStatus(
           req.params.id,
           status,
           user.id,
           notes
         );
-        
+
         if (!updated) {
           return res.status(500).json({ error: "Failed to update request status" });
         }
-        
+
         res.json(updated);
       }
     } catch (error) {
@@ -302,22 +303,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]),
         departmentId: z.string().optional(),
       });
-      
+
       const { password, departmentId, ...userData } = requestSchema.parse(req.body);
-      
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
-      
+
       // Prepare data for storage (convert "none" to undefined)
       const storageData = {
         ...userData,
         passwordHash,
         departmentId: departmentId === "none" ? undefined : departmentId,
       };
-      
+
       const validated = schema.insertUserSchema.parse(storageData);
       const user = await storage.createUser(validated);
-      
+
       // Send credential email
       try {
         await sendCredentialEmail(
@@ -331,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Failed to send credential email:", emailError);
         // Don't fail the user creation if email fails
       }
-      
+
       res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -353,22 +354,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: z.enum(["system_admin", "hr_manager", "department_manager", "employee"]).optional(),
         departmentId: z.string().optional(),
       });
-      
+
       const { password, departmentId, ...userData } = requestSchema.parse(req.body);
-      
+
       // Prepare update data
       let updateData: any = { ...userData };
-      
+
       // If password is provided, hash it
       if (password) {
         updateData.passwordHash = await bcrypt.hash(password, 10);
       }
-      
+
       // Convert "none" to undefined for departmentId
       if (departmentId !== undefined) {
         updateData.departmentId = departmentId === "none" ? undefined : departmentId;
       }
-      
+
       const validated = schema.insertUserSchema.partial().parse(updateData);
       const user = await storage.updateUser(req.params.id, validated);
       if (!user) {
@@ -551,8 +552,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: error.errors });
       } else {
+        console.error("Failed to create device:", error);
         res.status(500).json({ error: "Failed to create device" });
       }
+    }
+  });
+
+  app.put("/api/devices/:id", requireRole("system_admin", "hr_manager"), async (req, res) => {
+    try {
+      const validated = schema.insertAttendanceDeviceSchema.partial().parse(req.body);
+      const device = await storage.updateDevice(req.params.id, validated);
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+      res.json(device);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update device" });
+      }
+    }
+  });
+
+  app.delete("/api/devices/:id", requireRole("system_admin", "hr_manager"), async (req, res) => {
+    try {
+      const device = await storage.getDevice(req.params.id);
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+      await storage.deleteDevice(req.params.id);
+      res.json({ message: "Device deleted successfully" });
+    } catch (error) {
+      console.error("Failed to delete device:", error);
+      res.status(500).json({ error: "Failed to delete device" });
+    }
+  });
+
+  app.get("/api/devices/:id/logs", requireRole("system_admin", "hr_manager"), async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const logs = await storage.getDeviceLogs(req.params.id, limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Failed to fetch device logs:", error);
+      res.status(500).json({ error: "Failed to fetch device logs" });
     }
   });
 
@@ -575,10 +619,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/devices/:id/sync", requireRole("system_admin", "hr_manager"), async (req, res) => {
     try {
-      await storage.updateDeviceLastSync(req.params.id);
-      res.json({ message: "Device synced successfully" });
+      const device = await storage.getDevice(req.params.id);
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      // Trigger async sync
+      BioTimeService.syncDevice(device).catch((err: any) => {
+        console.error("Background sync error:", err);
+      });
+
+      res.status(202).json({ message: "Device sync started in background" });
     } catch (error) {
-      res.status(500).json({ error: "Failed to sync device" });
+      res.status(500).json({ error: "Failed to initiate device sync" });
+    }
+  });
+
+  app.post("/api/devices/test-connection", requireRole("system_admin", "hr_manager"), async (req, res) => {
+    try {
+      const connectionSchema = z.object({
+        ipAddress: z.string(),
+        port: z.string(),
+        username: z.string(),
+        password: z.string(),
+        connectionMode: z.string().optional(),
+      });
+
+      const config = connectionSchema.parse(req.body);
+
+      const biotime = new BioTimeService({
+        host: config.ipAddress,
+        port: config.port,
+        username: config.username,
+        password: config.password,
+      });
+
+      const result = await biotime.testConnection();
+
+      if (result.success) {
+        res.json({ connected: true, message: result.message });
+      } else {
+        res.status(400).json({ connected: false, error: result.message });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to test connection" });
+      }
     }
   });
 
@@ -969,18 +1057,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employees = await storage.getAllEmployees();
       const leaveRequests = await storage.getAllLeaveRequests();
       const expenseClaims = await storage.getAllExpenseClaims();
-      
+
       const today = new Date();
       const attendanceLogs = await storage.getAttendanceLogsByDate(today);
-      
+
       const stats = {
         totalEmployees: employees.filter(e => e.status === "active").length,
         presentToday: attendanceLogs.length,
-        pendingApprovals: leaveRequests.filter(r => r.status === "pending").length + 
-                         expenseClaims.filter(c => c.status === "pending").length,
+        pendingApprovals: leaveRequests.filter(r => r.status === "pending").length +
+          expenseClaims.filter(c => c.status === "pending").length,
         payrollThisMonth: "$0"
       };
-      
+
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch dashboard stats" });
@@ -993,14 +1081,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const departments = await storage.getAllDepartments();
       const leaveTypes = await storage.getAllLeaveTypes();
       const expenseCategories = await storage.getAllExpenseCategories();
-      
+
       const stats = {
         totalUsers: users.length,
         totalDepartments: departments.length,
         leaveTypesConfigured: leaveTypes.length,
         expenseCategoriesConfigured: expenseCategories.length,
       };
-      
+
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch admin dashboard stats" });

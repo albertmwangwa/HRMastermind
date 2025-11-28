@@ -202,8 +202,13 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-6 border-b border-sidebar-border">
-        <h2 className="text-xl font-semibold text-sidebar-foreground">HRMS</h2>
-        <p className="text-xs text-muted-foreground">{getRoleLabel()}</p>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="HRMS Logo" className="h-16 w-16 object-contain" />
+          <div>
+            <h2 className="text-xl font-semibold text-sidebar-foreground">SUHARA</h2>
+            <p className="text-xs text-muted-foreground">{getRoleLabel()}</p>
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -216,18 +221,18 @@ export function AppSidebar() {
                 // Normalize paths (remove trailing slashes)
                 const normalizedLocation = location === "/" ? "/" : location.replace(/\/$/, "");
                 const normalizedItemUrl = item.url === "/" ? "/" : item.url.replace(/\/$/, "");
-                
+
                 // Find the best match: exact match or longest prefix match
                 const matches = menuItems.filter(menuItem => {
                   const normalizedMenuUrl = menuItem.url === "/" ? "/" : menuItem.url.replace(/\/$/, "");
-                  return normalizedLocation === normalizedMenuUrl || 
-                         (normalizedMenuUrl !== "/" && normalizedLocation.startsWith(normalizedMenuUrl + "/"));
+                  return normalizedLocation === normalizedMenuUrl ||
+                    (normalizedMenuUrl !== "/" && normalizedLocation.startsWith(normalizedMenuUrl + "/"));
                 });
-                
+
                 // Sort by length to get the longest match
                 const longestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
                 const isActive = longestMatch && normalizedItemUrl === (longestMatch.url === "/" ? "/" : longestMatch.url.replace(/\/$/, ""));
-                
+
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton

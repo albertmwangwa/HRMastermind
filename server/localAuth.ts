@@ -8,11 +8,13 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 4 * 30 * 1000; // 4mins 30secs 1000ms
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    // In Docker or fresh environments the sessions table might not exist yet.
+    // Auto-create it to prevent session store errors that surface as 500 on /api/login.
+    createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -93,7 +95,8 @@ export async function setupAuth(app: Express) {
       },
       async (email, password, done) => {
         try {
-          const user = await storage.getUserByEmail(email);
+          const normalizedEmail = (email || "").trim().toLowerCase();
+          const user = await storage.getUserByEmail(normalizedEmail);
           if (!user) {
             return done(null, false, { message: "Invalid email or password" });
           }
@@ -102,14 +105,22 @@ export async function setupAuth(app: Express) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
-          const isValid = await bcrypt.compare(password, user.passwordHash);
+          // Some databases might contain non-bcrypt hashes. If bcrypt.compare throws,
+          // treat it as invalid credentials instead of a server error.
+          let isValid = false;
+          try {
+            isValid = await bcrypt.compare(password, user.passwordHash);
+          } catch (_e) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
           return done(null, user);
         } catch (error) {
-          return done(error);
+          // Do not leak internal errors to the client during login
+          return done(null, false, { message: "Invalid email or password" });
         }
       }
     )

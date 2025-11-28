@@ -13,14 +13,29 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save, Zap, RotateCcw, Upload, FileCode } from "lucide-react";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AttendanceDevice } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DeviceConfiguration({ params }: { params: { id: string } }) {
   const [, navigate] = useLocation();
+  const isNew = params.id === "new";
+  const { toast } = useToast();
+
+  // Fetch existing device data if not new
+  const { data: device, isLoading } = useQuery<AttendanceDevice>({
+    queryKey: [`/api/devices/${params.id}`],
+    enabled: !isNew,
+  });
+
   const [formData, setFormData] = useState({
-    name: "HQ - Main Entrance",
-    ipAddress: "192.168.1.100",
+    name: "New Device",
+    ipAddress: "192.168.1.201",
     port: "4370",
+    username: "admin",
+    password: "",
     location: "Headquarters",
     branch: "HQ",
     connectionMode: "tcp",
@@ -28,6 +43,25 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
     enableLogging: true,
     apiScript: "",
   });
+
+  // Update form data when device data is loaded
+  useEffect(() => {
+    if (device) {
+      setFormData({
+        name: device.name,
+        ipAddress: device.ipAddress,
+        port: device.port,
+        username: device.username,
+        password: device.password,
+        location: device.location,
+        branch: device.branch,
+        connectionMode: "tcp", // Default or stored if extended schema
+        timezone: "UTC", // Default or stored if extended schema
+        enableLogging: true,
+        apiScript: "",
+      });
+    }
+  }, [device]);
 
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "failed" | "timeout">("idle");
   const [testMessage, setTestMessage] = useState("");
@@ -48,6 +82,8 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
         body: JSON.stringify({
           ipAddress: formData.ipAddress,
           port: formData.port,
+          username: formData.username,
+          password: formData.password,
           connectionMode: formData.connectionMode,
         }),
       });
@@ -84,9 +120,33 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
     // TODO: Call API to sync employees
   };
 
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      if (isNew) {
+        return await apiRequest("POST", "/api/devices", data);
+      } else {
+        return await apiRequest("PUT", `/api/devices/${params.id}`, data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
+      toast({
+        title: "Device saved",
+        description: `Device has been successfully ${isNew ? "created" : "updated"}.`,
+      });
+      navigate("/admin/devices");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to save device",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = () => {
-    console.log("Saving device configuration:", formData);
-    // TODO: Call API to update device
+    saveMutation.mutate(formData);
   };
 
   return (
@@ -148,6 +208,29 @@ export default function DeviceConfiguration({ params }: { params: { id: string }
                     onChange={(e) => handleInputChange("port", e.target.value)}
                     placeholder="4370"
                     data-testid="input-port"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange("username", e.target.value)}
+                    placeholder="admin"
+                    data-testid="input-username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    placeholder="••••••••"
+                    data-testid="input-password"
                   />
                 </div>
               </div>

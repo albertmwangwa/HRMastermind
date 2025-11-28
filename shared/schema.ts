@@ -6,7 +6,7 @@ import { z } from "zod";
 // Enums
 export const roleEnum = pgEnum("role", ["system_admin", "hr_manager", "department_manager", "employee"]);
 export const employmentStatusEnum = pgEnum("employment_status", ["active", "inactive", "terminated"]);
-export const deviceStatusEnum = pgEnum("device_status", ["online", "offline"]);
+export const deviceStatusEnum = pgEnum("device_status", ["online", "offline", "syncing", "idle", "error"]);
 export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
 export const expenseStatusEnum = pgEnum("expense_status", ["pending", "approved", "rejected"]);
 export const jobStatusEnum = pgEnum("job_status", ["active", "closed"]);
@@ -84,8 +84,25 @@ export const attendanceDevices = pgTable("attendance_devices", {
   port: text("port").notNull().default("4370"),
   location: text("location").notNull(),
   branch: text("branch").notNull(),
+  username: text("username").notNull().default("admin"),
+  password: text("password").notNull().default("admin"),
   status: deviceStatusEnum("status").notNull().default("offline"),
   lastSyncAt: timestamp("last_sync_at"),
+  lastSyncRecordCount: integer("last_sync_record_count"),
+  lastSyncDuration: integer("last_sync_duration"),
+  lastSyncSuccess: boolean("last_sync_success"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Device Activity Logs
+export const deviceActivityLogs = pgTable("device_activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deviceId: varchar("device_id").references(() => attendanceDevices.id, { onDelete: "cascade" }).notNull(),
+  activityType: text("activity_type").notNull(), // sync_start, sync_success, sync_error, config_change, connection_test
+  details: text("details"),
+  recordCount: integer("record_count"),
+  duration: integer("duration"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -235,6 +252,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true });
 export const insertAttendanceDeviceSchema = createInsertSchema(attendanceDevices).omit({ id: true, createdAt: true, lastSyncAt: true });
+export const insertDeviceActivityLogSchema = createInsertSchema(deviceActivityLogs).omit({ id: true, createdAt: true });
 export const insertAttendanceLogSchema = createInsertSchema(attendanceLogs).omit({ id: true, createdAt: true });
 export const insertLeaveTypeSchema = createInsertSchema(leaveTypes).omit({ id: true, createdAt: true });
 export const insertLeaveRequestSchema = createInsertSchema(leaveRequests).omit({ id: true, createdAt: true, reviewedBy: true, reviewedAt: true });
@@ -262,6 +280,9 @@ export type Employee = typeof employees.$inferSelect;
 
 export type InsertAttendanceDevice = z.infer<typeof insertAttendanceDeviceSchema>;
 export type AttendanceDevice = typeof attendanceDevices.$inferSelect;
+
+export type InsertDeviceActivityLog = z.infer<typeof insertDeviceActivityLogSchema>;
+export type DeviceActivityLog = typeof deviceActivityLogs.$inferSelect;
 
 export type InsertAttendanceLog = z.infer<typeof insertAttendanceLogSchema>;
 export type AttendanceLog = typeof attendanceLogs.$inferSelect;

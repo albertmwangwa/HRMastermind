@@ -33,16 +33,14 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Login failed");
+        throw new Error(data.error || "Login failed");
       }
 
-      // Get user data from response
-      const userData = await response.json();
-      
       // Redirect based on user role
-      if (userData.role === "system_admin") {
+      if (data.role === "system_admin") {
         window.location.href = "/admin";
       } else {
         window.location.href = "/";
