@@ -102,7 +102,7 @@ export class BioTimeService {
     /**
      * Helper for robust fetch with retry and timeout
      */
-    private async fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 10000): Promise<Response> {
+    private async fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 30000): Promise<Response> {
         let lastError: any;
 
         for (let i = 0; i < retries; i++) {
@@ -377,8 +377,16 @@ export class BioTimeService {
             }
 
             // Step 3: Get and process attendance transactions
-            // User requested to pull all data, not limited to a time period
-            const transactions = await biotime.getAllTransactions({});
+            // Default to last 30 days to avoid timeout on large datasets
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+            console.log(`[BioTime] Fetching transactions since ${thirtyDaysAgo.toISOString()}`);
+
+            const transactions = await biotime.getAllTransactions({
+                startTime: thirtyDaysAgo
+            });
 
             recordCount = transactions.length;
             console.log(`[BioTime] Retrieved ${recordCount} transactions from device ${device.name}`);
