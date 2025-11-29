@@ -30,6 +30,7 @@ export default function AdminDevices() {
 
   const { data: devices, isLoading } = useQuery<AttendanceDevice[]>({
     queryKey: ["/api/devices"],
+    refetchInterval: 1000, // Poll every second to check for status updates
   });
 
   const deleteMutation = useMutation({

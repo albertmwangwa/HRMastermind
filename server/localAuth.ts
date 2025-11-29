@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 
 export function getSession() {
-  const sessionTtl = 4 * 30 * 1000; // 4mins 30secs 1000ms
+  const sessionTtl = 10 * 60 * 1000; // 10 minutes in milliseconds
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -56,9 +56,9 @@ export async function setupAuth(app: Express) {
 
     // In development, allow localhost origins
     if (process.env.NODE_ENV === "development") {
-      if (origin?.includes("localhost") || origin?.includes("127.0.0.1") || 
-          referer?.includes("localhost") || referer?.includes("127.0.0.1") ||
-          origin?.includes(host || "")) {
+      if (origin?.includes("localhost") || origin?.includes("127.0.0.1") ||
+        referer?.includes("localhost") || referer?.includes("127.0.0.1") ||
+        origin?.includes(host || "")) {
         return next();
       }
     }
@@ -155,7 +155,7 @@ export async function setupAuth(app: Express) {
         if (err) {
           return res.status(500).json({ error: "Login failed" });
         }
-        return res.json({ 
+        return res.json({
           id: user.id,
           email: user.email,
           firstName: user.firstName,
@@ -211,7 +211,7 @@ export function requireRole(...allowedRoles: string[]): RequestHandler {
     }
 
     const user = req.user as User;
-    
+
     if (!allowedRoles.includes(user.role)) {
       return res.status(403).json({ error: "Forbidden: Insufficient permissions" });
     }

@@ -35,6 +35,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/employees", requireRole("hr_manager", "system_admin"), async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
   app.get("/api/employees/:id", async (req, res) => {
     try {
       const employee = await storage.getEmployee(req.params.id);
@@ -75,6 +84,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to update employee" });
       }
+    }
+  });
+
+  app.delete("/api/employees/:id", requireRole("hr_manager"), async (req, res) => {
+    try {
+      const employee = await storage.getEmployee(req.params.id);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      await storage.deleteEmployee(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete employee" });
     }
   });
 
@@ -254,6 +276,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("Error processing employee request:", error);
         res.status(500).json({ error: "Failed to process employee request" });
+      }
+    }
+  });
+
+  // ========== EMPLOYEE MODULE ==========
+  app.get("/api/employees", async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
+  app.post("/api/employees", requireRole("hr_manager", "system_admin"), async (req, res) => {
+    try {
+      const validated = schema.insertEmployeeSchema.parse(req.body);
+      const employee = await storage.createEmployee(validated);
+      res.status(201).json(employee);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create employee" });
       }
     }
   });
@@ -575,31 +621,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/devices/:id", requireRole("system_admin", "hr_manager"), async (req, res) => {
+  app.post("/api/devices/:id/sync", requireRole("system_admin", "hr_manager"), async (req, res) => {
     try {
       const device = await storage.getDevice(req.params.id);
       if (!device) {
         return res.status(404).json({ error: "Device not found" });
       }
-      await storage.deleteDevice(req.params.id);
-      res.json({ message: "Device deleted successfully" });
+
+      // Update status to syncing
+      await storage.updateDeviceStatus(device.id, "syncing");
+
+      // Initialize BioTime service
+      const biotime = new BioTimeService({
+        host: device.ipAddress,
+        port: device.port,
+        username: device.username,
+        password: device.password,
+      });
+
+      // Perform sync in background (don't await)
+      // Note: syncDevice is a static method now
+      BioTimeService.syncDevice(device).catch((err: any) => {
+        console.error(`Background sync failed for device ${device.id}:`, err);
+      });
+
+      res.json({ message: "Sync started successfully" });
     } catch (error) {
-      console.error("Failed to delete device:", error);
-      res.status(500).json({ error: "Failed to delete device" });
+      console.error("Failed to start sync:", error);
+      res.status(500).json({ error: "Failed to start sync" });
     }
   });
 
   app.get("/api/devices/:id/logs", requireRole("system_admin", "hr_manager"), async (req, res) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const logs = await storage.getDeviceLogs(req.params.id, limit);
+      const logs = await storage.getDeviceLogs(req.params.id);
       res.json(logs);
     } catch (error) {
-      console.error("Failed to fetch device logs:", error);
       res.status(500).json({ error: "Failed to fetch device logs" });
     }
   });
 
+  // ========== ATTENDANCE & REPORTS MODULE ==========
+  app.get("/api/attendance", async (req, res) => {
+    try {
+      const { startDate, endDate, employeeId, departmentId } = req.query;
+
+      const filters = {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        employeeId: employeeId as string,
+        departmentId: departmentId as string,
+      };
+
+      const logs = await storage.getAttendanceLogs(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error("Failed to fetch attendance logs:", error);
+      res.status(500).json({ error: "Failed to fetch attendance logs" });
+    }
+  });
+
+  app.get("/api/reports/:type", requireRole("hr_manager", "system_admin"), async (req, res) => {
+    try {
+      const { type } = req.params;
+      const { startDate, endDate, period } = req.query;
+
+      if (!startDate || !endDate) {
+        if (!period) {
+          return res.status(400).json({ error: "Date range or period is required" });
+        }
+      }
+
+      const start = startDate ? new Date(startDate as string) : new Date();
+      const end = endDate ? new Date(endDate as string) : new Date();
+
+      let reportData;
+      switch (type) {
+        case "attendance":
+          reportData = await storage.getAttendanceReport(start, end);
+          break;
+        case "leave":
+          reportData = await storage.getLeaveReport(start, end);
+          break;
+        case "expense":
+          reportData = await storage.getExpenseReport(start, end);
+          break;
+        case "payroll":
+          reportData = await storage.getPayrollReport(period as string || "");
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid report type" });
+      }
+
+      res.json(reportData);
+    } catch (error) {
+      console.error(`Failed to generate ${req.params.type} report:`, error);
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
   app.patch("/api/devices/:id/status", requireRole("system_admin", "hr_manager"), async (req, res) => {
     try {
       const statusSchema = z.object({

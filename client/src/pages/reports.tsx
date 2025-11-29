@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, BarChart3 } from "lucide-react";
+import { Download, FileText, BarChart3, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,49 +10,126 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 
-//todo: remove mock functionality
 const reportCategories = [
-  { id: 1, name: "Attendance Report", description: "Employee attendance summary by date range", icon: FileText },
-  { id: 2, name: "Leave Report", description: "Leave balance and history for all employees", icon: FileText },
-  { id: 3, name: "Expense Report", description: "Expense claims and reimbursements summary", icon: FileText },
-  { id: 4, name: "Payroll Report", description: "Salary disbursement and payroll summary", icon: FileText },
-  { id: 5, name: "Performance Report", description: "Employee performance metrics and appraisals", icon: BarChart3 },
-  { id: 6, name: "Headcount Report", description: "Employee strength and turnover analysis", icon: BarChart3 },
+  { id: "attendance", name: "Attendance Report", description: "Employee attendance summary by date range", icon: FileText },
+  { id: "leave", name: "Leave Report", description: "Leave balance and history for all employees", icon: FileText },
+  { id: "expense", name: "Expense Report", description: "Expense claims and reimbursements summary", icon: FileText },
+  { id: "payroll", name: "Payroll Report", description: "Salary disbursement and payroll summary", icon: FileText },
+  // { id: "performance", name: "Performance Report", description: "Employee performance metrics and appraisals", icon: BarChart3 },
+  // { id: "headcount", name: "Headcount Report", description: "Employee strength and turnover analysis", icon: BarChart3 },
 ];
 
 export default function Reports() {
   const [selectedReport, setSelectedReport] = useState<string>("");
   const [reportPeriod, setReportPeriod] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [reportData, setReportData] = useState<any[]>([]);
+  const { toast } = useToast();
 
-  const handleGenerateReport = () => {
-    console.log(`Generating ${selectedReport} for period ${reportPeriod}`);
+  const getPeriodDates = () => {
+    const today = new Date();
+    switch (reportPeriod) {
+      case "current-month":
+        return { startDate: startOfMonth(today), endDate: endOfMonth(today) };
+      case "last-month":
+        const lastMonth = subMonths(today, 1);
+        return { startDate: startOfMonth(lastMonth), endDate: endOfMonth(lastMonth) };
+      case "current-quarter":
+        // Simplified quarter calculation
+        const currentQuarter = Math.floor((today.getMonth() + 3) / 3);
+        const quarterStart = new Date(today.getFullYear(), (currentQuarter - 1) * 3, 1);
+        const quarterEnd = new Date(today.getFullYear(), currentQuarter * 3, 0);
+        return { startDate: quarterStart, endDate: quarterEnd };
+      case "current-year":
+        return { startDate: startOfYear(today), endDate: endOfYear(today) };
+      default:
+        return { startDate: startOfMonth(today), endDate: endOfMonth(today) };
+    }
   };
 
-  const handleExportCSV = () => {
-    console.log(`Exporting ${selectedReport} to CSV for period ${reportPeriod}`);
-    const csvData = generateMockCSVData(selectedReport);
-    const csvContent = "data:text/csv;charset=utf-8," + csvData;
-    const encodedUri = encodeURI(csvContent);
+  const fetchReportData = async () => {
+    if (!selectedReport || !reportPeriod) return null;
+
+    setIsLoading(true);
+    try {
+      const { startDate, endDate } = getPeriodDates();
+      const params = new URLSearchParams({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        period: reportPeriod
+      });
+
+      const res = await fetch(`/api/reports/${selectedReport}?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to generate report");
+
+      const data = await res.json();
+      setReportData(data);
+      return data;
+    } catch (error) {
+      console.error("Report generation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateReport = () => {
+    fetchReportData();
+  };
+
+  const handleExportCSV = async () => {
+    let dataToExport = reportData;
+
+    // If no data generated yet, fetch it first
+    if (dataToExport.length === 0) {
+      dataToExport = await fetchReportData() || [];
+    }
+
+    if (dataToExport.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export for the selected criteria.",
+      });
+      return;
+    }
+
+    // Convert to CSV
+    const headers = Object.keys(dataToExport[0]);
+    const csvContent = [
+      headers.join(","),
+      ...dataToExport.map(row => headers.map(header => {
+        const value = row[header];
+        // Handle commas in values by wrapping in quotes
+        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+      }).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${selectedReport.replace(/ /g, "_")}_${reportPeriod}.csv`);
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${selectedReport}_${reportPeriod}_${format(new Date(), "yyyyMMdd")}.csv`);
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const generateMockCSVData = (reportType: string) => {
-    if (reportType.includes("Attendance")) {
-      return "Employee,Date,Check In,Check Out,Hours Worked\nJohn Smith,2024-03-25,09:00,17:30,8.5\nSarah Johnson,2024-03-25,08:45,17:15,8.5\n";
-    } else if (reportType.includes("Leave")) {
-      return "Employee,Leave Type,From,To,Days,Status\nJohn Smith,Annual Leave,2024-04-01,2024-04-05,5,Approved\nMike Chen,Sick Leave,2024-03-28,2024-03-29,2,Approved\n";
-    } else if (reportType.includes("Expense")) {
-      return "Employee,Category,Amount,Date,Status\nJohn Smith,Travel,$450,2024-03-25,Approved\nSarah Johnson,Meals,$120,2024-03-24,Approved\n";
-    } else if (reportType.includes("Payroll")) {
-      return "Employee,Basic Salary,Allowances,Deductions,Net Pay\nJohn Smith,$5000,$1500,$1200,$5300\nSarah Johnson,$6500,$2000,$1700,$6800\n";
-    }
-    return "Report,Data,Will,Be,Here\nSample,Row,1,2,3\n";
   };
 
   return (
@@ -76,7 +153,7 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   {reportCategories.map((report) => (
-                    <SelectItem key={report.id} value={report.name}>
+                    <SelectItem key={report.id} value={report.id}>
                       {report.name}
                     </SelectItem>
                   ))}
@@ -93,9 +170,7 @@ export default function Reports() {
                   <SelectItem value="current-month">Current Month</SelectItem>
                   <SelectItem value="last-month">Last Month</SelectItem>
                   <SelectItem value="current-quarter">Current Quarter</SelectItem>
-                  <SelectItem value="last-quarter">Last Quarter</SelectItem>
                   <SelectItem value="current-year">Current Year</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -103,16 +178,16 @@ export default function Reports() {
           <div className="flex gap-2">
             <Button
               onClick={handleGenerateReport}
-              disabled={!selectedReport || !reportPeriod}
+              disabled={!selectedReport || !reportPeriod || isLoading}
               data-testid="button-generate"
             >
-              <BarChart3 className="h-4 w-4 mr-2" />
+              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BarChart3 className="h-4 w-4 mr-2" />}
               Generate Report
             </Button>
             <Button
               variant="outline"
               onClick={handleExportCSV}
-              disabled={!selectedReport || !reportPeriod}
+              disabled={!selectedReport || !reportPeriod || isLoading}
               data-testid="button-export-csv"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -121,6 +196,41 @@ export default function Reports() {
           </div>
         </CardContent>
       </Card>
+
+      {reportData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Report Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {Object.keys(reportData[0]).map((header) => (
+                      <TableHead key={header}>{header}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportData.slice(0, 10).map((row, i) => (
+                    <TableRow key={i}>
+                      {Object.values(row).map((value: any, j) => (
+                        <TableCell key={j}>{value}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {reportData.length > 10 && (
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Showing first 10 rows of {reportData.length} records. Export to CSV to see all data.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <h2 className="text-lg font-semibold mb-4">Available Reports</h2>
@@ -144,8 +254,8 @@ export default function Reports() {
                   size="sm"
                   className="w-full"
                   onClick={() => {
-                    setSelectedReport(report.name);
-                    console.log(`Selected ${report.name}`);
+                    setSelectedReport(report.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   data-testid={`button-select-${report.id}`}
                 >

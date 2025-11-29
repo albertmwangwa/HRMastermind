@@ -25,27 +25,63 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, subDays, startOfMonth, startOfWeek, subMonths } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { AttendanceLog, Employee, AttendanceDevice } from "@shared/schema";
 
-//todo: remove mock functionality
-const attendanceRecords = [
-  { id: 1, employee: "John Smith", biometricId: "EMP001", checkIn: "09:02 AM", checkOut: "05:45 PM", device: "HQ - Main Entrance", date: "Today" },
-  { id: 2, employee: "Sarah Johnson", biometricId: "EMP002", checkIn: "08:55 AM", checkOut: "05:30 PM", device: "HQ - Main Entrance", date: "Today" },
-  { id: 3, employee: "Mike Chen", biometricId: "EMP003", checkIn: "09:15 AM", checkOut: "-", device: "Branch A - Gate 1", date: "Today" },
-  { id: 4, employee: "Emily Davis", biometricId: "EMP004", checkIn: "08:45 AM", checkOut: "05:20 PM", device: "HQ - Main Entrance", date: "Today" },
-];
+type AttendanceRecord = AttendanceLog & {
+  employee: Employee;
+  device: AttendanceDevice | null;
+};
 
 export default function Attendance() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
+    from: new Date(),
+    to: new Date(),
   });
   const [department, setDepartment] = useState("all");
-  const [location, setLocation] = useState("all");
-  const [company, setCompany] = useState("all");
   const [timePeriod, setTimePeriod] = useState("today");
   const [, navigate] = useLocation();
+
+  // Calculate date range based on timePeriod
+  const getEffectiveDateRange = () => {
+    const today = new Date();
+    switch (timePeriod) {
+      case "today":
+        return { from: today, to: today };
+      case "this-week":
+        return { from: startOfWeek(today), to: today };
+      case "this-month":
+        return { from: startOfMonth(today), to: today };
+      case "last-week":
+        const lastWeekStart = startOfWeek(subDays(today, 7));
+        return { from: lastWeekStart, to: subDays(lastWeekStart, -6) };
+      case "last-month":
+        const lastMonthStart = startOfMonth(subMonths(today, 1));
+        return { from: lastMonthStart, to: subMonths(startOfMonth(today), 0) }; // End of last month
+      case "custom":
+        return dateRange;
+      default:
+        return { from: today, to: today };
+    }
+  };
+
+  const effectiveRange = getEffectiveDateRange();
+
+  const { data: attendanceRecords = [], isLoading } = useQuery<AttendanceRecord[]>({
+    queryKey: ["/api/attendance", effectiveRange.from?.toISOString(), effectiveRange.to?.toISOString(), department],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (effectiveRange.from) params.append("startDate", effectiveRange.from.toISOString());
+      if (effectiveRange.to) params.append("endDate", effectiveRange.to.toISOString());
+      if (department !== "all") params.append("departmentId", department);
+
+      const res = await fetch(`/api/attendance?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch attendance records");
+      return res.json();
+    },
+  });
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -54,8 +90,8 @@ export default function Attendance() {
           <h1 className="text-2xl font-semibold">Attendance Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Track and monitor employee attendance records</p>
         </div>
-        <Button 
-          onClick={() => navigate("/attendance-entry")} 
+        <Button
+          onClick={() => navigate("/attendance-entry")}
           data-testid="button-manual-entry"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -142,6 +178,7 @@ export default function Attendance() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Departments</SelectItem>
+                      {/* TODO: Fetch departments dynamically */}
                       <SelectItem value="engineering">Engineering</SelectItem>
                       <SelectItem value="sales">Sales</SelectItem>
                       <SelectItem value="hr">HR</SelectItem>
@@ -149,32 +186,10 @@ export default function Attendance() {
                     </SelectContent>
                   </Select>
 
-                  <Select value={location} onValueChange={setLocation}>
-                    <SelectTrigger className="w-[140px]" data-testid="select-location">
-                      <SelectValue placeholder="Location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Locations</SelectItem>
-                      <SelectItem value="hq">Headquarters</SelectItem>
-                      <SelectItem value="branch-a">Branch A</SelectItem>
-                      <SelectItem value="branch-b">Branch B</SelectItem>
-                      <SelectItem value="warehouse">Warehouse</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={company} onValueChange={setCompany}>
-                    <SelectTrigger className="w-[140px]" data-testid="select-company">
-                      <SelectValue placeholder="Company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Companies</SelectItem>
-                      <SelectItem value="main">Main Company</SelectItem>
-                      <SelectItem value="subsidiary-a">Subsidiary A</SelectItem>
-                      <SelectItem value="subsidiary-b">Subsidiary B</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Button variant="outline" size="icon" data-testid="button-reset-filters">
+                  <Button variant="outline" size="icon" data-testid="button-reset-filters" onClick={() => {
+                    setTimePeriod("today");
+                    setDepartment("all");
+                  }}>
                     <Filter className="h-4 w-4" />
                   </Button>
                 </div>
@@ -192,15 +207,25 @@ export default function Attendance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendanceRecords.map((record) => (
-                    <TableRow key={record.id} data-testid={`attendance-record-${record.id}`}>
-                      <TableCell className="font-medium">{record.employee}</TableCell>
-                      <TableCell>{record.biometricId}</TableCell>
-                      <TableCell>{record.checkIn}</TableCell>
-                      <TableCell>{record.checkOut}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{record.device}</TableCell>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">Loading records...</TableCell>
                     </TableRow>
-                  ))}
+                  ) : attendanceRecords.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No attendance records found for this period.</TableCell>
+                    </TableRow>
+                  ) : (
+                    attendanceRecords.map((record) => (
+                      <TableRow key={record.id} data-testid={`attendance-record-${record.id}`}>
+                        <TableCell className="font-medium">{record.employee.firstName} {record.employee.lastName}</TableCell>
+                        <TableCell>{record.employee.biometricId}</TableCell>
+                        <TableCell>{record.checkIn ? new Date(record.checkIn).toLocaleTimeString() : "-"}</TableCell>
+                        <TableCell>{record.checkOut ? new Date(record.checkOut).toLocaleTimeString() : "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{record.device?.name || "Unknown"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -231,18 +256,15 @@ export default function Attendance() {
                   <p className="text-sm text-muted-foreground">Selected Date</p>
                   <p className="text-lg font-semibold">{date?.toLocaleDateString()}</p>
                 </div>
+                {/* Summary stats would need a separate API call or calculation */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm">Present</span>
-                    <span className="font-semibold">198</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">Absent</span>
-                    <span className="font-semibold">12</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">On Leave</span>
-                    <span className="font-semibold">37</span>
+                    <span className="text-sm">Records Found</span>
+                    <span className="font-semibold">
+                      {attendanceRecords.filter(r =>
+                        date && new Date(r.date).toDateString() === date.toDateString()
+                      ).length}
+                    </span>
                   </div>
                 </div>
               </CardContent>

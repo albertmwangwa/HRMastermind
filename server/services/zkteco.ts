@@ -59,26 +59,16 @@ interface BioTimeEmployee {
     passport: string | null;
     driver_license_automobile: string | null;
     driver_license_motorcycle: string | null;
-    photo: string | null;
-    self_password: string | null;
-    device_password: string | null;
-    dev_privilege: number;
-    card_no: string | null;
-    acc_group: number;
-    acc_timezone: number;
-    gender: string;
+    social_security_number: string | null;
+    health_insurance_number: string | null;
     birthday: string | null;
-    address: string | null;
-    postcode: string | null;
-    office_tel: string | null;
-    contact_tel: string | null;
+    gender: string | null;
+    nationality: number | null;
+    telephone: string | null;
     mobile: string | null;
-    national: string | null;
-    religion: string | null;
-    title: string | null;
-    enroll_sn: string | null;
-    ssn: string | null;
-    update_time: string | null;
+    email: string | null;
+    department: number | null;
+    position: number | null;
     hire_date: string | null;
     verify_mode: number;
     city: string | null;
@@ -89,9 +79,6 @@ interface BioTimeEmployee {
     deleted: boolean;
     reserved: string | null;
     del_tag: number;
-    department: number | null;
-    position: number | null;
-    email: string | null;
 }
 
 interface BioTimeEmployeesResponse {
@@ -113,11 +100,50 @@ export class BioTimeService {
     }
 
     /**
+     * Helper for robust fetch with retry and timeout
+     */
+    private async fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 10000): Promise<Response> {
+        let lastError: any;
+
+        for (let i = 0; i < retries; i++) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const { signal } = controller;
+
+            try {
+                console.log(`[BioTime] Request attempt ${i + 1}/${retries} to ${url}`);
+                const response = await fetch(url, { ...options, signal });
+                clearTimeout(id);
+                return response;
+            } catch (error: any) {
+                clearTimeout(id);
+                lastError = error;
+                console.warn(`[BioTime] Request attempt ${i + 1}/${retries} failed: ${error.message}`);
+
+                if (error.name === 'AbortError') {
+                    console.warn(`[BioTime] Request timed out after ${timeout}ms`);
+                }
+
+                // Wait before retrying (exponential backoff)
+                if (i < retries - 1) {
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        throw lastError;
+    }
+
+    /**
      * Authenticate with BioTime and get JWT token
      */
     private async authenticate(): Promise<string> {
         try {
-            const response = await fetch(`${this.baseUrl}/jwt-api-token-auth/`, {
+            const url = `${this.baseUrl}/jwt-api-token-auth/`;
+            console.log(`[BioTime] Authenticating with ${url}`);
+
+            const response = await this.fetchWithRetry(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -178,10 +204,10 @@ export class BioTimeService {
     async getEmployees(page = 1, pageSize = 100): Promise<BioTimeEmployee[]> {
         try {
             const headers = await this.getHeaders();
-            const response = await fetch(
-                `${this.baseUrl}/personnel/api/employees/?page=${page}&page_size=${pageSize}`,
-                { headers }
-            );
+            const url = `${this.baseUrl}/personnel/api/employees/?page=${page}&page_size=${pageSize}`;
+
+            console.log(`[BioTime] Fetching employees from ${url}`);
+            const response = await this.fetchWithRetry(url, { headers });
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch employees: ${response.status} ${response.statusText}`);
@@ -227,7 +253,8 @@ export class BioTimeService {
 
             const url = `${this.baseUrl}/iclock/api/transactions/?${queryParams.toString()}`;
 
-            const response = await fetch(url, { headers });
+            console.log(`[BioTime] Fetching transactions from ${url}`);
+            const response = await this.fetchWithRetry(url, { headers });
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch transactions: ${response.status} ${response.statusText}`);
@@ -284,14 +311,14 @@ export class BioTimeService {
     }
 
     /**
-     * Sync device and pull attendance records
+     * Sync device - pull employees and attendance records from BioTime
      */
     static async syncDevice(device: typeof attendanceDevices.$inferSelect) {
         console.log(`[BioTime] Starting sync for device ${device.name} (${device.ipAddress}:${device.port})`);
 
         const startTime = Date.now();
         let recordCount = 0;
-        let success = false;
+        let employeesCreated = 0;
 
         try {
             // Set device status to syncing
@@ -313,30 +340,58 @@ export class BioTimeService {
                 password: device.password,
             });
 
-            // Get transactions from the last sync or last 7 days
-            const syncStartTime = device.lastSyncAt || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const syncEndTime = new Date();
+            // Step 1: Sync employees from BioTime
+            console.log(`[BioTime] Fetching employees from device ${device.name}`);
+            const biotimeEmployees = await biotime.getEmployees();
+            console.log(`[BioTime] Found ${biotimeEmployees.length} employees on device`);
 
-            const transactions = await biotime.getAllTransactions({
-                startTime: syncStartTime,
-                endTime: syncEndTime,
-            });
+            // Step 2: Auto-create missing employees
+            for (const biotimeEmp of biotimeEmployees) {
+                const existing = await db.query.employees.findFirst({
+                    where: (employees, { eq }) => eq(employees.biometricId, biotimeEmp.emp_code)
+                });
+
+                if (!existing) {
+                    try {
+                        await db.insert(schema.employees).values({
+                            biometricId: biotimeEmp.emp_code,
+                            firstName: biotimeEmp.first_name || 'Unknown',
+                            lastName: biotimeEmp.last_name || '',
+                            email: biotimeEmp.email || `${biotimeEmp.emp_code}@biotime.local`,
+                            phone: biotimeEmp.mobile || null,
+                            role: 'Employee',
+                            status: biotimeEmp.enable_att ? 'active' : 'inactive',
+                            joiningDate: new Date().toISOString().split('T')[0],
+                            departmentId: null,
+                        });
+                        employeesCreated++;
+                        console.log(`[BioTime] Created employee: ${biotimeEmp.first_name} ${biotimeEmp.last_name} (${biotimeEmp.emp_code})`);
+                    } catch (error) {
+                        console.error(`[BioTime] Failed to create employee ${biotimeEmp.emp_code}:`, error);
+                    }
+                }
+            }
+
+            if (employeesCreated > 0) {
+                console.log(`[BioTime] Created ${employeesCreated} new employees from device`);
+            }
+
+            // Step 3: Get and process attendance transactions
+            // User requested to pull all data, not limited to a time period
+            const transactions = await biotime.getAllTransactions({});
 
             recordCount = transactions.length;
             console.log(`[BioTime] Retrieved ${recordCount} transactions from device ${device.name}`);
 
-            // TODO: Process and store transactions
-            // Map emp_code to employee records and create attendance logs
+            // Step 4: Process attendance records
+            let recordsProcessed = 0;
             for (const transaction of transactions) {
-                // Find employee by biometric ID (emp_code)
                 const employee = await db.query.employees.findFirst({
                     where: (employees, { eq }) => eq(employees.biometricId, transaction.emp_code)
                 });
 
                 if (employee) {
                     const punchTime = new Date(transaction.punch_time);
-
-                    // Create or update attendance log
                     await db.insert(attendanceLogs).values({
                         employeeId: employee.id,
                         deviceId: device.id,
@@ -344,11 +399,15 @@ export class BioTimeService {
                         checkOut: transaction.punch_state === "1" ? punchTime : null,
                         date: punchTime.toISOString().split('T')[0],
                     }).onConflictDoNothing();
+                    recordsProcessed++;
+                } else {
+                    console.warn(`[BioTime] No employee found for biometric ID: ${transaction.emp_code}`);
                 }
             }
 
+            console.log(`[BioTime] Processed ${recordsProcessed} attendance records`);
+
             const duration = Date.now() - startTime;
-            success = true;
 
             // Update device with success status and stats
             await db.update(attendanceDevices)
@@ -366,7 +425,7 @@ export class BioTimeService {
             await db.insert(schema.deviceActivityLogs).values({
                 deviceId: device.id,
                 activityType: "sync_success",
-                details: `Successfully synced ${recordCount} transactions`,
+                details: `Successfully synced ${recordCount} transactions, created ${employeesCreated} new employees`,
                 recordCount,
                 duration,
             });

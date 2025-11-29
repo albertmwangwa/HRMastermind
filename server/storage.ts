@@ -25,6 +25,7 @@ export interface IStorage {
   getEmployee(id: string): Promise<schema.Employee | undefined>;
   createEmployee(employee: schema.InsertEmployee): Promise<schema.Employee>;
   updateEmployee(id: string, employee: Partial<schema.InsertEmployee>): Promise<schema.Employee | undefined>;
+  deleteEmployee(id: string): Promise<void>;
 
   // Attendance Devices
   getAllDevices(): Promise<schema.AttendanceDevice[]>;
@@ -42,6 +43,18 @@ export interface IStorage {
   getAttendanceLogsByDate(date: Date): Promise<schema.AttendanceLog[]>;
   getAttendanceLogsByEmployee(employeeId: string): Promise<schema.AttendanceLog[]>;
   createAttendanceLog(log: schema.InsertAttendanceLog): Promise<schema.AttendanceLog>;
+  getAttendanceLogs(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    employeeId?: string;
+    departmentId?: string;
+  }): Promise<(schema.AttendanceLog & { employee: schema.Employee; device: schema.AttendanceDevice | null })[]>;
+
+  // Reports
+  getAttendanceReport(startDate: Date, endDate: Date): Promise<any[]>;
+  getLeaveReport(startDate: Date, endDate: Date): Promise<any[]>;
+  getExpenseReport(startDate: Date, endDate: Date): Promise<any[]>;
+  getPayrollReport(period: string): Promise<any[]>;
 
   // Leave Types
   getAllLeaveTypes(): Promise<schema.LeaveType[]>;
@@ -220,6 +233,10 @@ export class DbStorage implements IStorage {
     return updated;
   }
 
+  async deleteEmployee(id: string) {
+    await db.delete(schema.employees).where(eq(schema.employees.id, id));
+  }
+
   // Attendance Devices
   async getAllDevices() {
     return await db.select().from(schema.attendanceDevices);
@@ -295,6 +312,99 @@ export class DbStorage implements IStorage {
   async createAttendanceLog(log: schema.InsertAttendanceLog) {
     const [newLog] = await db.insert(schema.attendanceLogs).values(log).returning();
     return newLog;
+  }
+
+  async getAttendanceLogs(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    employeeId?: string;
+    departmentId?: string;
+  }) {
+    const conditions = [];
+
+    if (filters?.startDate) {
+      conditions.push(gte(schema.attendanceLogs.date, filters.startDate.toISOString().split('T')[0]));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(schema.attendanceLogs.date, filters.endDate.toISOString().split('T')[0]));
+    }
+    if (filters?.employeeId) {
+      conditions.push(eq(schema.attendanceLogs.employeeId, filters.employeeId));
+    }
+
+    let query = db.select({
+      attendanceLog: schema.attendanceLogs,
+      employee: schema.employees,
+      device: schema.attendanceDevices,
+    })
+      .from(schema.attendanceLogs)
+      .leftJoin(schema.employees, eq(schema.attendanceLogs.employeeId, schema.employees.id))
+      .leftJoin(schema.attendanceDevices, eq(schema.attendanceLogs.deviceId, schema.attendanceDevices.id))
+      .orderBy(desc(schema.attendanceLogs.date), desc(schema.attendanceLogs.checkIn));
+
+    if (conditions.length > 0) {
+      // @ts-ignore
+      query = query.where(and(...conditions));
+    }
+
+    const results = await query;
+
+    // Filter by department if needed (since it's on the employee table)
+    const filteredResults = filters?.departmentId
+      ? results.filter(r => r.employee?.departmentId === filters.departmentId)
+      : results;
+
+    return filteredResults.map(r => ({
+      ...r.attendanceLog,
+      employee: r.employee!,
+      device: r.device,
+    }));
+  }
+
+  // Reports
+  async getAttendanceReport(startDate: Date, endDate: Date) {
+    const logs = await this.getAttendanceLogs({ startDate, endDate });
+    return logs.map(log => ({
+      Employee: `${log.employee.firstName} ${log.employee.lastName}`,
+      Date: log.date,
+      "Check In": log.checkIn ? new Date(log.checkIn).toLocaleTimeString() : "-",
+      "Check Out": log.checkOut ? new Date(log.checkOut).toLocaleTimeString() : "-",
+      Device: log.device?.name || "Unknown",
+    }));
+  }
+
+  async getLeaveReport(startDate: Date, endDate: Date) {
+    const requests = await db.select({
+      request: schema.leaveRequests,
+      employee: schema.employees,
+      type: schema.leaveTypes,
+    })
+      .from(schema.leaveRequests)
+      .leftJoin(schema.employees, eq(schema.leaveRequests.employeeId, schema.employees.id))
+      .leftJoin(schema.leaveTypes, eq(schema.leaveRequests.leaveTypeId, schema.leaveTypes.id))
+      .where(and(
+        gte(schema.leaveRequests.fromDate, startDate.toISOString().split('T')[0]),
+        lte(schema.leaveRequests.toDate, endDate.toISOString().split('T')[0])
+      ));
+
+    return requests.map(r => ({
+      Employee: `${r.employee?.firstName} ${r.employee?.lastName}`,
+      "Leave Type": r.type?.name,
+      From: r.request.fromDate,
+      To: r.request.toDate,
+      Days: r.request.days,
+      Status: r.request.status,
+    }));
+  }
+
+  async getExpenseReport(startDate: Date, endDate: Date) {
+    // Placeholder - implement when expense module is fully ready
+    return [];
+  }
+
+  async getPayrollReport(period: string) {
+    // Placeholder - implement when payroll module is fully ready
+    return [];
   }
 
   // Leave Types
