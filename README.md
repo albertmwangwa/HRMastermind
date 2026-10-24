@@ -1,471 +1,128 @@
-# HRMS - Human Resource Management System
+# HRMastermind
 
-<div align="center">
+**A full-stack HR management system with biometric attendance built in.** HRMastermind covers the employee lifecycle from job posting to payslip, and pulls clock-in and clock-out records straight from ZKTeco attendance devices, so HR stops reconciling spreadsheets against a fingerprint reader.
 
-![HRMS](https://img.shields.io/badge/HRMS-v1.0.0-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6.3-blue)
-![React](https://img.shields.io/badge/React-18.3.1-61dafb)
-![Express](https://img.shields.io/badge/Express-4.21.2-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-336791)
-
-**A comprehensive enterprise HR management platform with biometric integration**
-
-[Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Tech Stack](#tech-stack)
-
-</div>
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6)
+![React](https://img.shields.io/badge/React-18-61dafb)
+![Express](https://img.shields.io/badge/Express-4-000000)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Drizzle%20ORM-336791)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ed)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## Overview
+## What it does
 
-HRMS is a full-stack Human Resource Management System designed to streamline the entire employee lifecycle from recruitment to payroll. Built with modern technologies and inspired by BambooHR and Workday, it features a professional UI, robust role-based access control, and seamless biometric device integration.
+| Module | Highlights |
+| --- | --- |
+| **Dashboard** | Role-specific metrics, pending approvals, recent activity |
+| **Employees and departments** | Directory with search and filters, profiles mapped to biometric IDs, organisation structure, employment status |
+| **Attendance** | ZKTeco device integration over TCP/IP, device configuration and sync logs, calendar view, manual corrections |
+| **Leave** | Configurable leave types and balances, request and multi-level approval flow |
+| **Expenses** | Claims with receipt upload, categories, approval queue |
+| **Performance** | Goals with progress tracking, appraisals, feedback, review cycles |
+| **Payroll** | Salary structures with allowances and deductions, automatic net pay, monthly payroll records (payslip download not yet wired up) |
+| **Recruitment** | Job postings and a candidate pipeline: Applied → Screening → Interview → Offer → Hired |
+| **Reports** | Attendance, leave, expense and performance summaries with CSV export |
+| **Administration** | User management and four-tier role-based access control |
 
-### Key Highlights
+### Roles
 
-✅ **Complete HR Lifecycle** - Recruitment, onboarding, attendance, leave, expenses, performance, payroll  
-✅ **ZKTeco Biometric Integration** - Direct integration with MB100 attendance devices  
-✅ **4-Tier RBAC** - System Admin, HR Manager, Department Manager, Employee  
-✅ **Automated Workflows** - Email notifications, approval chains, payroll processing  
-✅ **Modern UI/UX** - Responsive design, dark/light themes, professional aesthetics  
-✅ **Type-Safe Architecture** - End-to-end TypeScript with Drizzle ORM
+| Role | Can do |
+| --- | --- |
+| System Admin | Everything, including users, devices and configuration |
+| HR Manager | Employees, payroll, leave and expense approvals, recruitment |
+| Department Manager | Approvals and reports for their own team |
+| Employee | Own profile, attendance, leave, expenses and goals |
 
----
+Server routes enforce roles with a `requireRole(...)` guard, not just the UI.
 
-## Features
+## Architecture
 
-### 📊 Dashboard & Analytics
-- Role-specific dashboards with real-time metrics
-- Interactive charts and data visualizations
-- Quick access to pending approvals
-- Recent activity timeline
-
-### 👥 Employee Management
-- Complete employee directory with search & filters
-- Profile management with biometric ID mapping
-- Department assignment and organizational structure
-- Employment status tracking (Active/Inactive/Terminated)
-
-### ⏰ Attendance Tracking
-- **ZKTeco MB100 Device Integration** via TCP/IP
-- Real-time attendance logs with check-in/check-out times
-- Calendar view for visual attendance tracking
-- Comprehensive filters (date, department, location, branch)
-- Manual attendance entry for corrections
-- Device sync management with connection testing
-
-### 📅 Leave Management
-- Configurable leave types (Sick, Annual, Casual, etc.)
-- Leave balance tracking per employee
-- Request submission with approval workflow
-- Multi-level approval system
-- Leave calendar and history
-
-### 💰 Expense Management
-- Expense claim submission with receipt upload
-- Configurable expense categories
-- Approval workflow with receipt verification
-- Expense reports and analytics
-
-### 📈 Performance Management
-- Goal setting with progress tracking (0-100%)
-- Performance appraisals with rating system
-- 360-degree feedback
-- Quarterly/annual review cycles
-
-### 💵 Payroll Processing
-- Salary configuration with allowances and deductions
-- Components: Basic, HRA, Travel, Tax, PF, ESI
-- Net pay automatic calculation
-- Monthly payroll processing
-- Payslip generation
-
-### 🔎 Recruitment
-- Job posting creation and management
-- Candidate application tracking
-- Interview stage progression (Applied → Screening → Interview → Offer → Hired)
-- Candidate notes and history
-
-### 📊 Reports & Analytics
-- Attendance summary reports
-- Leave analytics
-- Expense reports
-- Performance metrics
-- Export to CSV/PDF
-
-### 🛡️ System Administration
-- User account management (CRUD)
-- Role assignment and permissions
-- Department configuration
-- Leave type and expense category setup
-- Automated credential emails via Resend
-
----
-
-## Quick Start
-
-### Choose Your Setup Method
-
-#### Option 1: Docker (Recommended for Easy Management) 🐳
-
-**Prerequisites:**
-- Docker Engine 20.10+ and Docker Compose 2.0+
-
-**Quick Start:**
-```bash
-# Clone repository
-git clone <repository-url>
-cd hrms-project
-
-# Start everything (app + database)
-docker compose up
-
-# Access application at http://localhost:5000
+```mermaid
+flowchart LR
+    U[Browser<br/>React + Vite + shadcn/ui] -->|REST / JSON| S[Express API<br/>~70 routes, session auth,<br/>role guards]
+    S --> D[(PostgreSQL<br/>Drizzle ORM, 18 tables)]
+    S --> Z[ZKTeco service<br/>TCP/IP device sync]
+    Z --> B[Biometric devices]
+    S --> E[Resend<br/>email notifications]
 ```
 
-**Production Deployment:**
-```bash
-# Create .env file with production credentials
-cp .env.example .env
-# Edit .env with your actual values
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, 20+ pages
+- **Backend:** Node.js, Express, Passport sessions, bcrypt password hashing
+- **Data:** PostgreSQL with Drizzle ORM; one shared, typed schema (`shared/schema.ts`) used by client and server
+- **Integrations:** ZKTeco attendance devices, Resend for transactional email
+- **Ops:** Docker and Docker Compose for development and production
 
-# Start production stack
-docker compose -f docker-compose.prod.yml up -d
+### Data model
+
+`users`, `departments`, `employees`, `employee_requests`, `attendance_devices`, `device_activity_logs`, `attendance_logs`, `leave_types`, `leave_requests`, `expense_categories`, `expense_claims`, `performance_goals`, `appraisals`, `feedback`, `salary_configs`, `payroll_records`, `job_postings`, `candidates`
+
+## Quick start
+
+### Docker (recommended)
+
+```bash
+git clone https://github.com/albertmwangwa/HRMastermind.git
+cd HRMastermind
+cp .env.example .env          # set SESSION_SECRET, database password, RESEND_API_KEY
+docker compose up             # app on http://localhost:5000, Postgres on 5432
 ```
 
-📖 **[Complete Docker Guide](docs/DOCKER_GUIDE.md)** - Full Docker documentation with troubleshooting, backup/restore, and advanced configuration.
+Production: `docker compose -f docker-compose.prod.yml up -d`. See [`docs/DOCKER_GUIDE.md`](docs/DOCKER_GUIDE.md) for backups and troubleshooting.
 
----
+### Local Node.js
 
-#### Option 2: Traditional Installation
+Requires Node.js 18+, PostgreSQL and (optionally) a Resend API key.
 
-**Prerequisites:**
-- Node.js 18+ and npm
-- PostgreSQL database (Neon recommended)
-- Resend API key (for emails)
+```bash
+npm install
+cp .env.example .env          # fill in DATABASE_URL, SESSION_SECRET (32+ chars), RESEND_API_KEY
+npm run db:push               # create tables
+npm run dev                   # http://localhost:5000
+```
 
-**Installation Steps:**
+Build and run for production with `npm run build && npm start`.
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd hrms-project
-   ```
+### First login
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables**
-   
-   Create a `.env` file in the project root:
-   ```bash
-   # Database
-   DATABASE_URL=postgresql://user:password@host:5432/dbname
-   PGHOST=your-host.neon.tech
-   PGDATABASE=hrms_db
-   PGUSER=db_user
-   PGPASSWORD=db_password
-   PGPORT=5432
-
-   # Session
-   SESSION_SECRET=your-random-secret-key-minimum-32-chars
-
-   # Email Service
-   RESEND_API_KEY=re_your_resend_api_key
-   ```
-
-4. **Initialize database**
-   ```bash
-   npm run db:push
-   ```
-
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-6. **Access the application**
-   - Open browser to `http://localhost:5000`
-   - Default admin credentials will be created on first run
-
----
+Seed accounts for each role are created on first start (`server/seed-users.ts`). **Change their passwords immediately**, and replace the seed data before any real deployment.
 
 ## Documentation
 
-Comprehensive documentation is available in the `/docs` folder:
+| Guide | Covers |
+| --- | --- |
+| [`docs/QUICK_START.md`](docs/QUICK_START.md) | Setup in a few minutes |
+| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | Day-to-day use per role |
+| [`docs/TECHNICAL_DOCUMENTATION.md`](docs/TECHNICAL_DOCUMENTATION.md) | Architecture, schema, API |
+| [`docs/SITE_MAP.md`](docs/SITE_MAP.md) | Every page and who can reach it |
+| [`docs/DOCKER_GUIDE.md`](docs/DOCKER_GUIDE.md) | Container setup and operations |
 
-📖 **[Technical Documentation](docs/TECHNICAL_DOCUMENTATION.md)**
-- System architecture
-- Database schema
-- API reference
-- Authentication & authorization
-- Module documentation
-
-🗺️ **[Site Map](docs/SITE_MAP.md)**
-- Complete route structure
-- Access control matrix
-- Navigation flows
-
-👤 **[User Guide](docs/USER_GUIDE.md)**
-- Role-specific walkthroughs
-- Module guides
-- Common tasks
-- FAQs
-
-🐳 **[Docker Guide](docs/DOCKER_GUIDE.md)**
-- Docker setup (development & production)
-- Container management
-- Backup & restore
-- Troubleshooting
-
----
-
-## Tech Stack
-
-### Frontend
-- **Framework**: React 18 with TypeScript
-- **Routing**: Wouter (lightweight client-side routing)
-- **State Management**: TanStack Query v5 for server state
-- **UI Components**: shadcn/ui (Radix UI primitives)
-- **Styling**: Tailwind CSS
-- **Forms**: React Hook Form with Zod validation
-- **Icons**: Lucide React
-- **Charts**: Recharts
-- **Theme**: next-themes (dark/light mode)
-
-### Backend
-- **Framework**: Express.js with TypeScript
-- **Authentication**: Passport.js (Local Strategy)
-- **Session Store**: PostgreSQL via connect-pg-simple
-- **Password Hashing**: bcrypt
-- **Email**: Resend
-- **Validation**: Zod
-
-### Database
-- **Database**: PostgreSQL (Neon Serverless)
-- **ORM**: Drizzle ORM
-- **Migrations**: Drizzle Kit
-
-### Build Tools
-- **Build**: Vite (frontend), esbuild (backend)
-- **Language**: TypeScript 5.6.3
-- **Package Manager**: npm
-
----
-
-## Project Structure
+## Project layout
 
 ```
-hrms-project/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/    # Reusable components
-│   │   ├── pages/         # Route pages
-│   │   ├── hooks/         # Custom hooks
-│   │   └── lib/           # Utilities
-│   └── public/            # Static assets
-│
-├── server/                # Express backend
-│   ├── routes.ts          # API endpoints
-│   ├── storage.ts         # Database layer
-│   └── index-dev.ts       # Dev server
-│
-├── shared/                # Shared types & schemas
-│   └── schema.ts          # Drizzle schema
-│
-├── docs/                  # Documentation
-│   ├── TECHNICAL_DOCUMENTATION.md
-│   ├── SITE_MAP.md
-│   └── USER_GUIDE.md
-│
-└── package.json           # Dependencies
+HRMastermind/
+├── client/src/        # React app: pages/, components/ (shadcn/ui), hooks, lib
+├── server/            # Express app, routes, auth, storage layer, email
+│   └── services/      # ZKTeco device integration
+├── shared/schema.ts   # Drizzle schema and Zod types shared by client and server
+├── docs/              # User and technical guides
+└── docker-compose*.yml, Dockerfile*
 ```
-
----
-
-## Scripts
-
-```bash
-# Development
-npm run dev              # Start dev server with hot reload
-
-# Production
-npm run build            # Build for production
-npm start                # Start production server
-
-# Database
-npm run db:push          # Push schema to database
-
-# Type Checking
-npm run check            # TypeScript type checking
-```
-
----
-
-## Role-Based Access Control
-
-### User Roles
-
-1. **System Admin** (Highest Privilege)
-   - Full system configuration
-   - User management
-   - Device configuration
-   - System settings
-
-2. **HR Manager**
-   - Complete HR operations
-   - Employee CRUD
-   - Recruitment
-   - Payroll processing
-   - Leave/expense approval (all)
-
-3. **Department Manager**
-   - Team management
-   - Leave/expense approval (own department)
-   - Performance reviews
-   - Employee requests
-
-4. **Employee** (Base Access)
-   - Self-service portal
-   - Leave requests
-   - Expense claims
-   - Performance goals
-   - View own attendance
-
----
-
-## ZKTeco Device Integration
-
-### Supported Devices
-- ZKTeco MB100 (primary)
-- Other ZKTeco devices with TCP/IP support
-
-### Configuration
-1. Navigate to `/admin/devices` (System Admin only)
-2. Add new device with IP address and port (default: 4370)
-3. Test connection to verify device is reachable
-4. Configure location and branch information
-5. Sync attendance data manually or on schedule
-
-### Connection Testing
-The system provides real-time connection testing:
-- **Idle**: No test performed
-- **Testing**: Attempting connection
-- **Connected**: Device is reachable
-- **Failed**: Connection error
-- **Timeout**: Device not responding
-
-### Advanced Settings
-- ZKTeco API Mode with custom script support
-- Upload scripts (.js, .json, .txt, .xml)
-- Manual sync trigger
-- Auto-sync scheduling (configurable)
-
----
-
-## Deployment
-
-### Docker Deployment (Recommended)
-
-**Easiest and most reliable deployment method:**
-
-1. Clone repository on your server
-2. Create `.env` file with production credentials
-3. Run:
-   ```bash
-   docker compose -f docker-compose.prod.yml up -d
-   ```
-4. Configure reverse proxy (nginx) for HTTPS
-
-See **[Docker Guide](docs/DOCKER_GUIDE.md)** for complete instructions.
-
-### Replit
-
-1. Fork/import project to Replit
-2. Configure secrets:
-   - `DATABASE_URL`
-   - `SESSION_SECRET`
-   - `RESEND_API_KEY`
-3. Use Replit PostgreSQL integration
-4. Click "Run" - application starts automatically
-5. Click "Publish" for production deployment
-
-### Manual Deployment
-
-1. Build the application:
-   ```bash
-   npm run build
-   ```
-
-2. Set environment variables on your server
-
-3. Start the production server:
-   ```bash
-   npm start
-   ```
-
-4. Configure reverse proxy (nginx/Apache) for HTTPS
-
----
-
-## Security
-
-- **Password Hashing**: bcrypt with salt rounds
-- **Session Management**: Secure HTTP-only cookies
-- **CSRF Protection**: Express session with secure settings
-- **SQL Injection Prevention**: Drizzle ORM parameterized queries
-- **XSS Protection**: React automatic escaping
-- **Role-Based Authorization**: Middleware enforcement on all protected routes
-
----
-
-## Browser Support
-
-- Chrome/Edge: Latest 2 versions
-- Firefox: Latest 2 versions
-- Safari: Latest 2 versions
-- Mobile: iOS 14+, Android 10+
-
----
-
-## Contributing
-
-This is a private enterprise application. For issues or feature requests, contact the development team.
-
----
-
-## License
-
-MIT License - See LICENSE file for details
-
----
-
-## Support
-
-For technical support:
-- **Documentation**: See `/docs` folder
-- **System Admin**: Contact your company's System Administrator
-- **Development Team**: Email: support@yourcompany.com
-
----
 
 ## Roadmap
 
-### Upcoming Features
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] Integration with third-party payroll services
-- [ ] Document management system
-- [ ] Training and development module
-- [ ] Employee self-onboarding portal
+- [ ] Automated tests (API integration tests and key UI flows)
+- [ ] Localise payroll for Tanzania: PAYE bands, NSSF, SDL and WCF in place of the current generic HRA/PF/ESI fields
+- [ ] Configurable seed users driven by environment variables, with a forced password change on first login
+- [ ] PDF payslip download and PDF report export
+- [ ] Audit log for approvals and payroll changes
 
----
+## Author
 
-<div align="center">
+**Albert William Mwangwa** · Dar es Salaam
+[GitHub](https://github.com/albertmwangwa)
 
-**Built with ❤️ using React, Express, and PostgreSQL**
+## License
 
-Version 1.0.0 | November 2025
-
-</div>
+[MIT](package.json)
